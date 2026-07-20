@@ -16,6 +16,6 @@ body {
   margin: 0;
   font-family: var(--typo-font-type);
   color: var(--color-text-base);
-  background: var(--color-surface-primary-subtlest);
+  background: var(--color-surface-base);
   -webkit-font-smoothing: antialiased;
 }

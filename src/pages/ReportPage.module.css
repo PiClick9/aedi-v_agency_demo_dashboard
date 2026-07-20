@@ -1,0 +1,605 @@
+/* "보고서 영문" — Creator Sign-up Report (Figma node 3910:19916)
+ *
+ * Measured on the 1920x1080 artboard (content column x=360, width 1200):
+ *   header_pc              1920 x 84
+ *   content        y=166   1200 x 1219.245        (82 below the header)
+ *   ├ title        y=0     26        (20px bold, 1.3)
+ *   └ viz          y=58    1200 x 692.245
+ *      ├ tabs      y=0     1200 x 326
+ *      │  ├ date row       1200 x 48
+ *      │  └ y=120          1200 x 206
+ *      │     ├ summary     1200 x 142   (5 cards, gap 11)
+ *      │     └ y=158       1200 x 48    (graph tabs)
+ *      └ graph     y=350   1200 x 342.245
+ *   └ table block  y=774.245  1200 x 445
+ *      ├ buttons   y=0     272 x 40  (right-aligned at x=928)
+ *      ├ table     y=56    1200 x 315  (header 55 + 5 rows x 52)
+ *      └ pager     y=403   1200 x 42
+ */
+
+.page {
+  min-height: 100%;
+  background: var(--color-surface-base);
+}
+
+.content {
+  width: 100%;
+  max-width: 1320px; /* 1200 content column + 2 x 60 gutter */
+  margin: 0 auto;
+  padding: 82px 60px 120px;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-headline-medium);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-headline);
+  color: var(--color-text-base);
+}
+
+.viz {
+  margin-top: var(--spacing-8);
+}
+
+/* --- date row ---------------------------------------------------------- */
+
+.dateRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  height: var(--height-48);
+}
+
+.dateLabel {
+  flex-shrink: 0;
+  font-size: var(--font-size-body-xlarge);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+  color: var(--color-text-base);
+  white-space: nowrap;
+}
+
+.select {
+  flex-shrink: 0;
+  width: 210px;
+  height: var(--height-48);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: 0 var(--spacing-4);
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--radius-m);
+}
+
+.selectValue {
+  flex: 1 0 0;
+  min-width: 0;
+  font-size: var(--font-size-body-large);
+  line-height: var(--line-height-body);
+  color: var(--color-text-base);
+}
+
+.selectDivider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border-base);
+}
+
+.selectArrow {
+  width: 11.199px;
+  height: 5.599px;
+}
+
+.datepicker {
+  flex-shrink: 0;
+  width: 354px;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.dateField {
+  flex: 1 0 0;
+  min-width: 0;
+  height: var(--height-48);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 0 var(--spacing-4);
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--radius-m);
+}
+
+.calendarIcon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 18px;
+}
+
+.dateValue {
+  flex: 1 0 0;
+  min-width: 0;
+  font-size: var(--font-size-body-large);
+  line-height: var(--line-height-body);
+  color: var(--color-text-base);
+  white-space: nowrap;
+}
+
+.dateSeparator {
+  flex-shrink: 0;
+  font-size: var(--font-size-body-large);
+  font-weight: var(--font-weight-bold);
+  line-height: 24px;
+  color: var(--color-text-base);
+}
+
+.dateTabs {
+  flex-shrink: 0;
+  display: flex;
+  width: 492px;
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--radius-m);
+}
+
+.dateTab {
+  /* Figma shows 4 x 123 inside a 492 frame, but its stroke is drawn inside the
+     frame, so the four tabs actually share 490 of content box. */
+  flex: 1 0 0;
+  height: var(--height-48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 0;
+  font-family: inherit;
+  font-size: var(--font-size-body-large);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+  color: var(--color-text-disabled);
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Inner tabs carry their own divider; the group's own border draws the ends. */
+.dateTab:not(:last-child) {
+  border-right: 1px solid var(--color-border-base);
+}
+
+.dateTabActive {
+  background: var(--color-surface-selected);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-base);
+}
+
+/* --- summary cards ----------------------------------------------------- */
+
+.summary {
+  margin-top: var(--spacing-18);
+  display: flex;
+  gap: 11px;
+}
+
+.card {
+  flex: 1 0 0;
+  min-width: 0;
+  height: 142px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding: 20px 24px;
+  background: var(--color-surface-base);
+  border-bottom: 2px solid var(--card-accent);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+
+.cardLabel {
+  font-size: var(--font-size-body-large);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+  color: var(--color-icon-disabled-dark);
+  white-space: nowrap;
+}
+
+.cardValue {
+  font-size: var(--font-size-headline-medium);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-headline);
+  color: var(--color-text-base);
+}
+
+.cardDelta {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-body-medium);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+  color: var(--color-icon-disabled-dark);
+}
+
+.cardTrend {
+  width: 23.049px;
+  height: 14px;
+}
+
+/* --- graph tabs -------------------------------------------------------- */
+
+.graphTabs {
+  margin-top: var(--spacing-4);
+  height: var(--height-48);
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  border-bottom: 1px solid var(--color-border-base);
+}
+
+.graphTab {
+  height: var(--height-48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px var(--spacing-4);
+  font-family: inherit;
+  font-size: var(--font-size-body-large);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+  color: var(--color-text-disabled);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.graphTabActive {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-base);
+  border-bottom-color: var(--color-border-primary);
+}
+
+/* --- chart ------------------------------------------------------------- */
+
+.chartArea {
+  margin-top: var(--spacing-6);
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.legend {
+  margin-top: 8px;
+  display: flex;
+  gap: var(--spacing-3);
+  justify-content: center;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body);
+  color: #000000;
+  white-space: nowrap;
+}
+
+.legendDot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-circle);
+}
+
+/* The markup series is a line, so its swatch is a bar with a dot on it. */
+.legendLine {
+  position: relative;
+  width: 16px;
+  height: 8px;
+}
+
+.legendLine::before {
+  content: '';
+  position: absolute;
+  inset: 3px 0 3px 0;
+  background: var(--color-border-pd04);
+}
+
+.legendLine::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-circle);
+  background: var(--color-border-pd04);
+}
+
+/* --- actions ----------------------------------------------------------- */
+
+.actions {
+  margin-top: var(--spacing-6);
+  display: flex;
+  gap: var(--spacing-4);
+  justify-content: flex-end;
+}
+
+.buttonBase {
+  height: var(--height-40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-1);
+  padding: 0 var(--spacing-4);
+  font-family: inherit;
+  font-size: var(--font-size-body-medium);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-body);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.exportButton {
+  composes: buttonBase;
+  width: 126px;
+  color: var(--color-text-base);
+  background: var(--color-btn-tertiary-fill);
+  border: var(--border-width-thin) solid var(--color-btn-tertiary-border);
+}
+
+.addButton {
+  composes: buttonBase;
+  width: 130px;
+  color: var(--color-text-inverse);
+  background: var(--color-btn-primary-fill);
+  border: none;
+}
+
+/* Figma insets each vector inside its icon box, so the box is 16 but the
+   artwork is smaller. Filling the box makes the icons read too heavy. */
+.buttonIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+.buttonIcon > img {
+  display: block;
+}
+
+.iconDownload > img {
+  width: 11.87px; /* inset 12.92% */
+  height: 11.87px;
+}
+
+.iconAdd > img {
+  width: 10.67px; /* inset 16.67% top and bottom, 1:1 */
+  height: 10.67px;
+}
+
+/* --- table ------------------------------------------------------------- */
+
+.tableWrap {
+  margin-top: var(--spacing-4);
+}
+
+.table {
+  width: 100%;
+  min-width: 1200px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.table th,
+.table td {
+  padding: 0 var(--spacing-6);
+  border-bottom: 1px solid var(--color-border-base);
+  font-size: var(--font-size-body-large);
+  line-height: var(--line-height-body);
+  color: var(--color-text-base);
+  text-align: center;
+}
+
+.table thead th {
+  height: 55px;
+  background: var(--color-surface-primary-subtlest);
+  font-weight: var(--font-weight-bold);
+  /* The design wraps these headings mid-word ("Subscript / ion Plan") because
+     the columns are narrower than the words. Match it. */
+  overflow-wrap: anywhere;
+}
+
+.table tbody td {
+  height: 52px;
+  background: var(--color-surface-secondary-subtler);
+  font-weight: var(--font-weight-regular);
+  white-space: nowrap;
+}
+
+/* Column widths from the artboard: six 130.333 columns plus 174, 146 and 98. */
+.colFlex {
+  width: 130.333px;
+}
+
+.colCreator {
+  width: 174px;
+}
+
+.colStart {
+  width: 146px;
+}
+
+.colAction {
+  width: 98px;
+  padding: 0 var(--spacing-4);
+}
+
+.alignRight {
+  text-align: right;
+}
+
+/* Header wrapping is per-column in the design. These four are set to nowrap,
+   so their text centres across the full cell and ignores the 24px padding
+   (e.g. "Sign-up Date" is 99 wide in a 130.33 cell). */
+.table th.headNowrap {
+  padding: 0;
+  white-space: nowrap;
+}
+
+/* "Last Payment Date" wraps inside an explicit 123px box, not the 82.33 the
+   standard padding would leave — which is why it must not use it. */
+.table th.headLastPayment {
+  padding: 0 3.667px;
+}
+
+/* "Markup" is the one header the design sets a step larger. */
+.table th.headMarkup {
+  font-size: var(--font-size-body-xlarge);
+}
+
+.deleteButton {
+  height: var(--height-36);
+  padding: 0 var(--spacing-3);
+  font-family: inherit;
+  font-size: var(--font-size-body-medium);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-body);
+  color: var(--color-text-base);
+  background: var(--color-btn-tertiary-fill);
+  border: var(--border-width-thin) solid var(--color-btn-tertiary-border);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+}
+
+/* --- pagination -------------------------------------------------------- */
+
+.pagination {
+  margin-top: var(--spacing-8);
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-8);
+}
+
+.pagerGroup {
+  display: flex;
+  align-items: center;
+}
+
+.pagerArrow {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.pagerArrow {
+  display: grid;
+  place-items: center;
+}
+
+.pagerArrow img {
+  display: block;
+}
+
+/* First/last are 18x18 inside the 24 box; prev/next are 10x18. */
+.pagerEnd img {
+  width: 18px;
+  height: 18px;
+}
+
+.pagerStep img {
+  width: 10px;
+  height: 18px;
+}
+
+.pagerPage {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: var(--font-size-body-small);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-body);
+  color: var(--color-text-inverse);
+  background: var(--color-surface-primary);
+  border: none;
+  border-radius: var(--radius-m);
+  cursor: pointer;
+}
+
+/* --- Responsive -------------------------------------------------------- *
+ * The report is a fixed 1200px column. Below 1320 the gutters collapse, and
+ * the table — which cannot usefully reflow at 9 columns — scrolls sideways
+ * inside its own container so the page itself never does.                  */
+@media (max-width: 1319px) {
+  .content {
+    padding: 48px 20px 80px;
+  }
+
+  .dateRow {
+    height: auto;
+    flex-wrap: wrap;
+  }
+
+  .summary {
+    margin-top: var(--spacing-8);
+    flex-wrap: wrap;
+  }
+
+  .card {
+    flex: 1 0 200px;
+  }
+
+  .tableWrap {
+    overflow-x: auto;
+  }
+
+  /* Scaling the 1200-wide plot down to phone width shrinks its 12px labels to
+     about 3px. Scroll it at design scale instead, as the table does. */
+  .chartArea {
+    overflow-x: auto;
+  }
+
+  .chart {
+    min-width: 1200px;
+  }
+
+  .legend {
+    min-width: 1200px;
+  }
+}
+
+@media (max-width: 767px) {
+  .datepicker {
+    width: 100%;
+  }
+
+  .dateTabs {
+    width: 100%;
+  }
+
+  .dateTab {
+    flex: 1 0 0;
+    width: auto;
+  }
+
+  .select {
+    flex: 1 0 160px;
+    width: auto;
+  }
+}

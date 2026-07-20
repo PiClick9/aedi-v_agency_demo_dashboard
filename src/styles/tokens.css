@@ -1,22 +1,43 @@
 /* Design tokens mirrored from the Figma variable collection
    (file 9yvybIE3fvZjLzm0FrCqOO — "aedi-v 디자인").
    Values come from get_variable_defs, not from the fallbacks inlined in the
-   generated code — the two disagree (e.g. radius/xl is 10, not 20). */
+   generated code — the two disagree (e.g. radius/xl is 10 not 20,
+   headline/medium is 20 not 24, border/pd01 is #061669 not #1095ce). */
 :root {
-  /* color */
+  /* color — surface */
   --color-bg-base: #ffffff;
   --color-surface-base: #ffffff;
+  --color-surface-primary: #1a1a1a;
   --color-surface-primary-subtlest: #f7f8fa;
-  --color-border-base: #e4e7ea;
+  --color-surface-secondary-subtler: #fcfcfd;
+  --color-surface-selected: #f0f0f3;
+  --color-input-fill-disabled: #f0f0f3;
+
+  /* color — text & icon */
   --color-text-base: #1a1a1a;
+  --color-text-primary: #1a1a1a;
   --color-text-disabled: #999fa5;
   --color-text-inverse: #ffffff;
+  --color-icon-base: #1a1a1a;
   --color-icon-inverse: #ffffff;
+  --color-icon-disabled: #999fa5;
+  --color-icon-disabled-dark: #767d84;
+
+  /* color — border */
+  --color-border-base: #e4e7ea;
+  --color-border-primary: #1a1a1a;
+  --color-border-pd01: #061669;
+  --color-border-pd02: #297fff;
+  --color-border-pd03: #17a15f;
+  --color-border-pd04: #ffab08;
+  --color-border-pd06: #00b1b9;
+
+  /* color — button */
   --color-btn-primary-fill: #1a1a1a;
   --color-btn-secondary-fill: #ffffff;
   --color-btn-secondary-border: #1a1a1a;
-  --color-text-primary: #1a1a1a;
-  --color-input-fill-disabled: #f0f0f3;
+  --color-btn-tertiary-fill: #ffffff;
+  --color-btn-tertiary-border: #e4e7ea;
 
   /* typography */
   --typo-font-type: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI',
@@ -25,30 +46,41 @@
   --font-weight-medium: 500;
   --font-weight-bold: 700;
   --font-size-headline-xxxlarge: 32px;
+  --font-size-headline-medium: 20px;
   --font-size-body-xlarge: 18px;
   --font-size-body-large: 16px;
   --font-size-body-medium: 14px;
+  --font-size-body-small: 12px;
   --line-height-body: 1.5;
   --line-height-headline: 1.3;
 
   /* spacing */
   --spacing-1: 4px;
   --spacing-2: 8px;
+  --spacing-3: 12px;
   --spacing-4: 16px;
   --spacing-5: 20px;
   --spacing-6: 24px;
+  --spacing-8: 32px;
   --spacing-9: 36px;
   --spacing-11: 44px;
+  --spacing-18: 72px;
 
   /* radius */
+  --radius-s: 3px;
   --radius-m: 5px;
   --radius-xl: 10px;
   --radius-circle: 999px;
 
   /* size */
+  --height-36: 36px;
   --height-40: 40px;
   --height-48: 48px;
+  --border-width-thin: 1px;
 
   /* effect */
   --shadow-1: 0 0 16px 0 rgba(0, 0, 0, 0.1);
+  --shadow-3: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 0 5px 0 rgba(0, 0, 0, 0.1);
+  --shadow-gnb-pc: 0 10px 10px 0 rgba(174, 183, 194, 0.1);
 }

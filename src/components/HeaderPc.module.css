@@ -1,0 +1,56 @@
+/* header_pc (Figma node 3910:19917) — 1920 x 84, logo at left 360 / top 26. */
+
+.header {
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 60px;
+  background: var(--color-surface-base);
+  box-shadow: var(--shadow-gnb-pc);
+}
+
+/* The artboard pads by 360px, which is exactly the gutter beside the 1200px
+   content column. Track the content column instead so the logo stays aligned
+   with the report at any width. */
+.inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 137.765px;
+  height: 32px;
+}
+
+/* Both SVGs are exported with preserveAspectRatio="none" and no intrinsic
+   size, so width AND height must be pinned or they fall back to 300x150. */
+.logoSymbol {
+  width: 32px;
+  height: 32px;
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.logoWordmark {
+  width: 97.765px;
+  height: 25.07px;
+}
+
+.globe {
+  width: 24px;
+  height: 24px;
+}
+
+@media (max-width: 767px) {
+  .header {
+    padding: 0 20px;
+  }
+}
