@@ -1,0 +1,94 @@
+/* Temporary landing page — replaced by the first dashboard screen. */
+
+.page {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 144px 24px 48px;
+  background: var(--color-surface-primary-subtlest);
+}
+
+.logo {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  width: 259px;
+  height: 60px;
+}
+
+/* Both SVGs are exported with preserveAspectRatio="none" and no intrinsic
+   size, so width AND height must be pinned or they fall back to 300x150. */
+.logoSymbol {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-circle);
+  overflow: hidden;
+}
+
+.logoWordmark {
+  width: 181px;
+  height: 46.41px;
+}
+
+.card {
+  margin-top: 48px;
+  width: 100%;
+  max-width: 667px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-6);
+  padding: var(--spacing-11) var(--spacing-9);
+  background: var(--color-surface-base);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-1);
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-headline-xxxlarge);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-headline);
+  color: #000000;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--font-size-body-large);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+  color: var(--color-text-disabled);
+}
+
+@media (max-width: 767px) {
+  .page {
+    padding: 48px 20px 32px;
+  }
+
+  .logo {
+    width: 207.2px;
+    height: 48px;
+    gap: 14.4px;
+  }
+
+  .logoSymbol {
+    width: 48px;
+    height: 48px;
+  }
+
+  .logoWordmark {
+    width: 144.8px;
+    height: 37.13px;
+  }
+
+  .card {
+    margin-top: 36px;
+    padding: 32px 20px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+}
