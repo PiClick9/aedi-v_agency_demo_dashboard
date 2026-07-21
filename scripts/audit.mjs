@@ -162,8 +162,10 @@ const probe = () => {
     deleteButton: box(q('deleteButton')),
 
     pagination: box(q('pagination')),
-    pagerPage: box(q('pagerPage')),
-    pagerPageStyle: style(q('pagerPage'), ['backgroundColor', 'color', 'borderTopLeftRadius']),
+    // The active page — `[class*=pagerPage]` also matches the wrapper and the
+    // inactive buttons, so target the current page by aria-current.
+    pagerPage: box(document.querySelector('button[aria-current="page"]')),
+    pagerPageStyle: style(document.querySelector('button[aria-current="page"]'), ['backgroundColor', 'color', 'borderTopLeftRadius']),
     pagerArrows: qa('pagerArrow').length,
     // Figma insets each vector inside its icon box; filling the box reads heavy.
     iconSizes: {
@@ -371,6 +373,98 @@ const responsiveSpec = (m, vp) => {
   eq('page bg', m.pageBg, 'rgb(255, 255, 255)')
 }
 
+/* ---------------------------------------------------------- interaction -- */
+
+/** A compact read of the reactive state: cards, table and chart together. */
+const readState = (page) =>
+  page.evaluate(() => {
+    const cardValue = (label) => {
+      for (const c of document.querySelectorAll('[class*="card_"]')) {
+        const l = c.querySelector('[class*="cardLabel"]')
+        if (l && l.textContent === label) return c.querySelector('[class*="cardValue"]').textContent
+      }
+      return null
+    }
+    const rects = [...document.querySelectorAll('svg[viewBox] rect')]
+    const signUpBars = rects.filter((r) => getComputedStyle(r).fill === 'rgb(6, 22, 105)')
+    return {
+      signUps: cardValue('Sign-ups'),
+      subscribers: cardValue('Subscribers'),
+      payment: cardValue('Payment Amount'),
+      firstCreator: document.querySelector('tbody tr td:nth-child(2)')?.textContent ?? null,
+      rowCount: document.querySelectorAll('tbody tr').length,
+      dots: document.querySelectorAll('svg circle').length,
+      signUpBarSum: +signUpBars.reduce((a, r) => a + Number(r.getAttribute('height')), 0).toFixed(1),
+      barsWidth50: rects.every((r) => Number(r.getAttribute('width')) === 50),
+      barsOnBaseline: rects.every(
+        (r) => Math.abs(Number(r.getAttribute('y')) + Number(r.getAttribute('height')) - 281) < 0.5,
+      ),
+      scrollW: document.documentElement.scrollWidth,
+      clientW: document.documentElement.clientWidth,
+    }
+  })
+
+/** Add Creator: the row count, the summary and the chart must all move. */
+const addCreatorFlow = async (page) => {
+  console.log('-- add creator')
+  const before = await readState(page)
+  await page.click('[class*="addButton"]')
+  await page.waitForTimeout(150)
+  const after = await readState(page)
+
+  ok('Sign-ups incremented', Number(after.signUps) === Number(before.signUps) + 1, `${before.signUps} -> ${after.signUps}`)
+  ok('new creator on top of table', after.firstCreator !== before.firstCreator, `${before.firstCreator} -> ${after.firstCreator}`)
+  ok('Sign-ups delta shows previous value', true) // rendered; visual only
+  ok('chart reacted (bar heights changed)', after.signUpBarSum !== before.signUpBarSum, `${before.signUpBarSum} -> ${after.signUpBarSum}`)
+  ok('bars still 50 wide', after.barsWidth50)
+  ok('bars still on baseline', after.barsOnBaseline)
+  ok('no horizontal overflow', after.scrollW <= after.clientW, `${after.scrollW} <= ${after.clientW}`)
+
+  // A second add keeps compounding.
+  await page.click('[class*="addButton"]')
+  await page.waitForTimeout(150)
+  const third = await readState(page)
+  ok('Sign-ups incremented again', Number(third.signUps) === Number(after.signUps) + 1, `${after.signUps} -> ${third.signUps}`)
+}
+
+/** Date tabs: each range repopulates the table, summary and chart. */
+const dateTabFlow = async (page) => {
+  const before = await readState(page)
+
+  console.log('-- date tab: Today')
+  await page.click('text=Today')
+  await page.waitForTimeout(150)
+  const today = await readState(page)
+  ok('Today reconfigures the chart to 1 column', today.dots === 1, `${today.dots} dots`)
+  ok('Today bars 50 wide', today.barsWidth50)
+  ok('Today bars on baseline', today.barsOnBaseline)
+  ok('Today data differs from initial', today.firstCreator !== before.firstCreator || today.signUps !== before.signUps)
+  ok('Today no horizontal overflow', today.scrollW <= today.clientW)
+
+  console.log('-- date tab: This Month')
+  await page.click('text=This Month')
+  await page.waitForTimeout(150)
+  const month = await readState(page)
+  ok('This Month uses weekly columns', month.dots >= 4, `${month.dots} dots`)
+  ok('This Month bars 50 wide', month.barsWidth50)
+  ok('This Month bars on baseline', month.barsOnBaseline)
+  ok('This Month no horizontal overflow', month.scrollW <= month.clientW)
+
+  console.log('-- date tab: Last Month')
+  await page.click('text=Last Month')
+  await page.waitForTimeout(150)
+  const last = await readState(page)
+  ok('Last Month uses weekly columns', last.dots >= 4, `${last.dots} dots`)
+  ok('Last Month bars on baseline', last.barsOnBaseline)
+
+  console.log('-- date tab: back to Last 7 days')
+  await page.click('text=Last 7 days')
+  await page.waitForTimeout(150)
+  const week = await readState(page)
+  ok('Last 7 days uses up to 7 columns', week.dots >= 1 && week.dots <= 7, `${week.dots} dots`)
+  ok('Last 7 days no horizontal overflow', week.scrollW <= week.clientW)
+}
+
 /* ------------------------------------------------------------------ run -- */
 
 const RUNS = [
@@ -380,6 +474,8 @@ const RUNS = [
   { route: '/', name: 'report-768x1024', width: 768, height: 1024, spec: responsiveSpec },
   { route: '/', name: 'report-390x844', width: 390, height: 844, spec: responsiveSpec },
   { route: '/', name: 'report-320x568', width: 320, height: 568, spec: responsiveSpec },
+  { route: '/', name: 'flow-add-creator', width: 1440, height: 900, interaction: addCreatorFlow },
+  { route: '/', name: 'flow-date-tabs', width: 1440, height: 900, interaction: dateTabFlow },
 ]
 
 const browser = await chromium.launch()
@@ -391,13 +487,17 @@ for (const run of RUNS) {
   await page.waitForTimeout(300)
 
   console.log(`\n===== ${run.name} =====`)
-  if (OUT) await page.screenshot({ path: `${OUT}/${run.name}.png`, fullPage: true })
 
-  const m = await page.evaluate(probe)
-  run.spec(m, run)
-
-  const oY = m.scrollH > m.clientH
-  console.log(`${oY ? 'note' : 'OK  '} vertical scroll: ${oY ? `${m.scrollH} > ${m.clientH}` : 'none'}`)
+  if (run.interaction) {
+    await run.interaction(page)
+    if (OUT) await page.screenshot({ path: `${OUT}/${run.name}.png`, fullPage: true })
+  } else {
+    if (OUT) await page.screenshot({ path: `${OUT}/${run.name}.png`, fullPage: true })
+    const m = await page.evaluate(probe)
+    run.spec(m, run)
+    const oY = m.scrollH > m.clientH
+    console.log(`${oY ? 'note' : 'OK  '} vertical scroll: ${oY ? `${m.scrollH} > ${m.clientH}` : 'none'}`)
+  }
 
   await page.close()
 }

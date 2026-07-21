@@ -1,7 +1,22 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import HeaderPc from '../components/HeaderPc'
 import SignupChart from '../components/SignupChart'
-import { DATE_TABS, GRAPH_TABS, ROWS, SUMMARY } from '../data/report'
+import {
+  GRAPH_TABS,
+  DATE_TABS,
+  INITIAL_BUCKETS,
+  INITIAL_CARDS,
+  INITIAL_CREATORS,
+  buildCards,
+  bumpBucket,
+  computeValues,
+  generateDataset,
+  makeCreator,
+  type Card,
+  type Creator,
+  type Bucket,
+  type Range,
+} from '../data/report'
 import chevron from '../assets/icon-chevron.svg'
 import calendar from '../assets/icon-calendar.svg'
 import download from '../assets/icon-download.svg'
@@ -13,10 +28,52 @@ import pageLast from '../assets/icon-page-last.svg'
 import trendUp from '../assets/icon-trend-up.png'
 import styles from './ReportPage.module.css'
 
+const PAGE_SIZE = 5
+
 /** "보고서 영문" — Creator Sign-up Report (Figma node 3910:19916). */
 export default function ReportPage() {
-  const [dateTab, setDateTab] = useState<string>('Last 7 days')
+  const [range, setRange] = useState<Range>('Last 7 days')
   const [graphTab, setGraphTab] = useState<string>('Daily')
+  const [creators, setCreators] = useState<Creator[]>(INITIAL_CREATORS)
+  const [buckets, setBuckets] = useState<Bucket[]>(INITIAL_BUCKETS)
+  const [cards, setCards] = useState<Card[]>(INITIAL_CARDS)
+  const [page, setPage] = useState(1)
+
+  const pageCount = Math.max(1, Math.ceil(creators.length / PAGE_SIZE))
+  const current = Math.min(page, pageCount)
+  const pageRows = useMemo(
+    () => creators.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE),
+    [creators, current],
+  )
+
+  // Clicking a range assumes a fresh population of creators for that window.
+  const selectRange = (next: Range) => {
+    setRange(next)
+    const ds = generateDataset(next)
+    setCreators(ds.creators)
+    setBuckets(ds.buckets)
+    setCards(ds.cards)
+    setPage(1)
+  }
+
+  const addCreator = () => {
+    const prev = computeValues(creators)
+    const { creator, bucketIndex } = makeCreator(creators, buckets)
+    const nextCreators = [creator, ...creators]
+    setCreators(nextCreators)
+    setBuckets(bumpBucket(buckets, bucketIndex, creator))
+    setCards(buildCards(computeValues(nextCreators), prev))
+    setPage(1)
+  }
+
+  const deleteCreator = (id: number) => {
+    const prev = computeValues(creators)
+    const nextCreators = creators.filter((c) => c.id !== id)
+    setCreators(nextCreators)
+    setCards(buildCards(computeValues(nextCreators), prev))
+  }
+
+  const goToPage = (p: number) => setPage(Math.min(pageCount, Math.max(1, p)))
 
   return (
     <div className={styles.page}>
@@ -52,8 +109,8 @@ export default function ReportPage() {
                 <button
                   key={tab}
                   type="button"
-                  className={`${styles.dateTab} ${tab === dateTab ? styles.dateTabActive : ''}`}
-                  onClick={() => setDateTab(tab)}
+                  className={`${styles.dateTab} ${tab === range ? styles.dateTabActive : ''}`}
+                  onClick={() => selectRange(tab)}
                 >
                   {tab}
                 </button>
@@ -62,7 +119,7 @@ export default function ReportPage() {
           </div>
 
           <div className={styles.summary}>
-            {SUMMARY.map((item) => (
+            {cards.map((item) => (
               <div
                 key={item.label}
                 className={styles.card}
@@ -92,20 +149,14 @@ export default function ReportPage() {
           </div>
 
           <div className={styles.chartArea}>
-            <SignupChart className={styles.chart} />
+            <SignupChart className={styles.chart} buckets={buckets} />
             <div className={styles.legend}>
               <span className={styles.legendItem}>
-                <span
-                  className={styles.legendDot}
-                  style={{ background: 'var(--color-border-pd01)' }}
-                />
+                <span className={styles.legendDot} style={{ background: 'var(--color-border-pd01)' }} />
                 Sign-ups
               </span>
               <span className={styles.legendItem}>
-                <span
-                  className={styles.legendDot}
-                  style={{ background: 'var(--color-border-pd02)' }}
-                />
+                <span className={styles.legendDot} style={{ background: 'var(--color-border-pd02)' }} />
                 Subscribers
               </span>
               <span className={styles.legendItem}>
@@ -119,11 +170,15 @@ export default function ReportPage() {
         <section>
           <div className={styles.actions}>
             <button type="button" className={styles.exportButton}>
-              <span className={`${styles.buttonIcon} ${styles.iconDownload}`}><img src={download} alt="" /></span>
+              <span className={`${styles.buttonIcon} ${styles.iconDownload}`}>
+                <img src={download} alt="" />
+              </span>
               Export CSV
             </button>
-            <button type="button" className={styles.addButton}>
-              <span className={`${styles.buttonIcon} ${styles.iconAdd}`}><img src={add} alt="" /></span>
+            <button type="button" className={styles.addButton} onClick={addCreator}>
+              <span className={`${styles.buttonIcon} ${styles.iconAdd}`}>
+                <img src={add} alt="" />
+              </span>
               Add Creator
             </button>
           </div>
@@ -144,8 +199,8 @@ export default function ReportPage() {
                 </tr>
               </thead>
               <tbody>
-                {ROWS.map((row) => (
-                  <tr key={row.creator}>
+                {pageRows.map((row) => (
+                  <tr key={row.id}>
                     <td className={styles.colFlex}>{row.signUpDate}</td>
                     <td className={styles.colCreator}>{row.creator}</td>
                     <td className={styles.colFlex}>{row.promoCredit}</td>
@@ -155,7 +210,11 @@ export default function ReportPage() {
                     <td className={styles.colFlex}>{row.amount}</td>
                     <td className={styles.colFlex}>{row.markup}</td>
                     <td className={styles.colAction}>
-                      <button type="button" className={styles.deleteButton}>
+                      <button
+                        type="button"
+                        className={styles.deleteButton}
+                        onClick={() => deleteCreator(row.id)}
+                      >
                         Delete
                       </button>
                     </td>
@@ -167,21 +226,53 @@ export default function ReportPage() {
 
           <nav className={styles.pagination} aria-label="Pagination">
             <span className={styles.pagerGroup}>
-              <button type="button" className={`${styles.pagerArrow} ${styles.pagerEnd}`} aria-label="First page">
+              <button
+                type="button"
+                className={`${styles.pagerArrow} ${styles.pagerEnd}`}
+                aria-label="First page"
+                onClick={() => goToPage(1)}
+              >
                 <img src={pageFirst} alt="" />
               </button>
-              <button type="button" className={`${styles.pagerArrow} ${styles.pagerStep}`} aria-label="Previous page">
+              <button
+                type="button"
+                className={`${styles.pagerArrow} ${styles.pagerStep}`}
+                aria-label="Previous page"
+                onClick={() => goToPage(current - 1)}
+              >
                 <img src={pagePrev} alt="" />
               </button>
             </span>
-            <button type="button" className={styles.pagerPage} aria-current="page">
-              1
-            </button>
+
+            <span className={styles.pagerPages}>
+              {Array.from({ length: pageCount }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={p === current ? styles.pagerPage : styles.pagerPageInactive}
+                  aria-current={p === current ? 'page' : undefined}
+                  onClick={() => goToPage(p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </span>
+
             <span className={styles.pagerGroup}>
-              <button type="button" className={`${styles.pagerArrow} ${styles.pagerStep}`} aria-label="Next page">
+              <button
+                type="button"
+                className={`${styles.pagerArrow} ${styles.pagerStep}`}
+                aria-label="Next page"
+                onClick={() => goToPage(current + 1)}
+              >
                 <img src={pageNext} alt="" />
               </button>
-              <button type="button" className={`${styles.pagerArrow} ${styles.pagerEnd}`} aria-label="Last page">
+              <button
+                type="button"
+                className={`${styles.pagerArrow} ${styles.pagerEnd}`}
+                aria-label="Last page"
+                onClick={() => goToPage(pageCount)}
+              >
                 <img src={pageLast} alt="" />
               </button>
             </span>

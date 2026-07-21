@@ -525,6 +525,12 @@
   height: 18px;
 }
 
+.pagerPages {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
 .pagerPage {
   width: 30px;
   height: 30px;
@@ -540,6 +546,28 @@
   border: none;
   border-radius: var(--radius-m);
   cursor: pointer;
+}
+
+/* Extra pages appear only once generated data spills past five rows. */
+.pagerPageInactive {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: var(--font-size-body-small);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-body);
+  color: var(--color-text-base);
+  background: none;
+  border: none;
+  border-radius: var(--radius-m);
+  cursor: pointer;
+}
+
+.pagerPageInactive:hover {
+  background: var(--color-surface-selected);
 }
 
 /* --- Responsive -------------------------------------------------------- *
