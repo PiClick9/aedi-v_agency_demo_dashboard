@@ -261,7 +261,9 @@
 }
 
 .cardValue {
-  font-size: var(--font-size-headline-medium);
+  /* Per design, the metric value is 24px (the headline/medium variable reads 20,
+     but the intended size is 24). The section title still uses the 20 token. */
+  font-size: 24px;
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-headline);
   color: var(--color-text-base);

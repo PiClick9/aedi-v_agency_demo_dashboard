@@ -267,7 +267,7 @@ const reportSpec = (m) => {
   }
   near('card label size', m.cardLabelType.size, 16)
   eq('card label colour', m.cardLabelType.color, 'rgb(118, 125, 132)')
-  near('card value size', m.cardValueType.size, 20)
+  near('card value size', m.cardValueType.size, 24)
   eq('card value weight', m.cardValueType.weight, '700')
   near('card delta size', m.cardDeltaType.size, 14)
 
