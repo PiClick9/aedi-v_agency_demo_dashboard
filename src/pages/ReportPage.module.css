@@ -510,6 +510,9 @@
   text-align: right !important;
 }
 
+.paddingRight{
+  padding-right: 24px !important;
+}
 /* Header wrapping is per-column in the design. These four are set to nowrap,
    so their text centres across the full cell and ignores the 24px padding
    (e.g. "Sign-up Date" is 99 wide in a 130.33 cell). */

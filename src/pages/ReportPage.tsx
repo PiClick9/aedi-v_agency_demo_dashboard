@@ -265,7 +265,7 @@ export default function ReportPage() {
                   <th className={`${styles.colFlex} ${styles.colPlan}`}>Subscription Plan</th>
                   <th className={`${styles.colFlex} ${styles.headLastPayment}`}>Last Payment Date</th>
                   <th className={`${styles.colFlex} ${styles.alignRight}`}>Payment Amount</th>
-                  <th className={`${styles.colFlex} ${styles.headMarkup} ${styles.headNowrap}`}>Markup</th>
+                  <th className={`${styles.colFlex} ${styles.headMarkup} ${styles.headNowrap} ${styles.alignRight} ${styles.paddingRight}`}>Markup</th>
                   <th className={styles.colAction} aria-label="Actions" />
                 </tr>
               </thead>
