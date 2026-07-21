@@ -4,17 +4,15 @@ import SignupChart from '../components/SignupChart'
 import {
   GRAPH_TABS,
   DATE_TABS,
-  INITIAL_BUCKETS,
   INITIAL_CARDS,
   INITIAL_CREATORS,
-  buildCards,
-  bumpBucket,
-  computeValues,
+  INITIAL_DEFS,
+  cardsFor,
+  deriveChart,
+  deriveValues,
   generateDataset,
   makeCreator,
-  type Card,
-  type Creator,
-  type Bucket,
+  type Dataset,
   type Range,
 } from '../data/report'
 import chevron from '../assets/icon-chevron.svg'
@@ -30,13 +28,11 @@ import styles from './ReportPage.module.css'
 
 const PAGE_SIZE = 5
 
-type Dataset = { creators: Creator[]; buckets: Bucket[]; cards: Card[] }
-
-// "Last 7 days" is the default and is pinned to the exact design data. Other
-// ranges are generated once, on first visit, then cached — so re-clicking an
-// active tab does nothing and returning to a tab shows the same data.
+// "Last 7 days" is the default and is pinned to fixed data. Other ranges are
+// generated once, on first visit, then cached — so re-clicking an active tab
+// does nothing and returning to a tab shows the same data.
 const INITIAL_DATASETS: Partial<Record<Range, Dataset>> = {
-  'Last 7 days': { creators: INITIAL_CREATORS, buckets: INITIAL_BUCKETS, cards: INITIAL_CARDS },
+  'Last 7 days': { creators: INITIAL_CREATORS, defs: INITIAL_DEFS, cards: INITIAL_CARDS },
 }
 
 /** "보고서 영문" — Creator Sign-up Report (Figma node 3910:19916). */
@@ -55,7 +51,8 @@ export default function ReportPage() {
     if (id !== null) newTimer.current = window.setTimeout(() => setNewId(null), 2400)
   }
 
-  const { creators, buckets, cards } = datasets[range]!
+  const { creators, defs, cards } = datasets[range]!
+  const buckets = useMemo(() => deriveChart(creators, defs), [creators, defs])
 
   const pageCount = Math.max(1, Math.ceil(creators.length / PAGE_SIZE))
   const current = Math.min(page, pageCount)
@@ -77,22 +74,19 @@ export default function ReportPage() {
     setDatasets((prev) => ({ ...prev, [range]: dataset }))
 
   const addCreator = () => {
-    const prev = computeValues(creators)
-    const { creator, bucketIndex } = makeCreator(creators, buckets)
+    const prev = deriveValues(creators, defs)
+    const creator = makeCreator(creators, defs)
     const nextCreators = [creator, ...creators]
-    updateCurrent({
-      creators: nextCreators,
-      buckets: bumpBucket(buckets, bucketIndex, creator),
-      cards: buildCards(computeValues(nextCreators), prev),
-    })
+    updateCurrent({ creators: nextCreators, defs, cards: cardsFor(nextCreators, defs, prev) })
     setPage(1)
     flagNew(creator.id)
   }
 
   const deleteCreator = (id: number) => {
-    const prev = computeValues(creators)
+    const prev = deriveValues(creators, defs)
     const nextCreators = creators.filter((c) => c.id !== id)
-    updateCurrent({ creators: nextCreators, buckets, cards: buildCards(computeValues(nextCreators), prev) })
+    updateCurrent({ creators: nextCreators, defs, cards: cardsFor(nextCreators, defs, prev) })
+    flagNew(null)
   }
 
   const goToPage = (p: number) => setPage(Math.min(pageCount, Math.max(1, p)))

@@ -157,6 +157,7 @@ const probe = () => {
     headBg: headCells[0] ? getComputedStyle(headCells[0]).backgroundColor : null,
     bodyRows: [...document.querySelectorAll('tbody tr')].map(box),
     bodyCells: firstRowCells.map((el) => ({ ...box(el), text: el.textContent })),
+    bodyTexts: [...document.querySelectorAll('tbody td')].map((el) => el.textContent),
     bodyType: type(firstRowCells[0]),
     bodyBg: firstRowCells[0] ? getComputedStyle(firstRowCells[0]).backgroundColor : null,
     deleteButton: box(q('deleteButton')),
@@ -296,6 +297,11 @@ const reportSpec = (m) => {
   ok('3 legend entries', m.legendItems === 3, `${m.legendItems}`)
   near('legend centre x', cx(m.legend), cx(m.chart), 1)
 
+  // Rules: sign-up bar always >= subscriber bar, and no 0-height (empty) bars.
+  const pairsOk = signUps.every((su, i) => su.h >= subs[i].h - 0.01)
+  ok('sign-up bar never shorter than subscriber bar', pairsOk)
+  ok('no zero-height bars', m.bars.every((b) => b.h > 0), `min ${Math.min(...m.bars.map((b) => b.h)).toFixed(1)}`)
+
   console.log('-- actions')
   near('export button w', m.exportButton.w, 126)
   near('export button h', m.exportButton.h, 40)
@@ -329,6 +335,9 @@ const reportSpec = (m) => {
   near('body font-size', m.bodyType.size, 16)
   eq('body weight', m.bodyType.weight, '400')
   near('delete button h', m.deleteButton.h, 36)
+  // Rule: no zero values in the table — no "$0" and no "-" placeholder cells.
+  ok('no $0 cells in the table', !m.bodyTexts.includes('$0'), m.bodyTexts.filter((t) => t === '$0').length + ' found')
+  ok('no "-" cells in the table', !m.bodyTexts.includes('-'), m.bodyTexts.filter((t) => t === '-').length + ' found')
 
   console.log('-- pagination')
   near('pagination y (from table)', m.pagination.y - (m.table.y + m.table.h), 32)
@@ -386,7 +395,10 @@ const readState = (page) =>
       return null
     }
     const rects = [...document.querySelectorAll('svg[viewBox] rect')]
+    const h = (r) => Number(r.getAttribute('height'))
     const signUpBars = rects.filter((r) => getComputedStyle(r).fill === 'rgb(6, 22, 105)')
+    const subBars = rects.filter((r) => getComputedStyle(r).fill === 'rgb(41, 127, 255)')
+    const bodyTexts = [...document.querySelectorAll('tbody td')].map((el) => el.textContent)
     return {
       signUps: cardValue('Sign-ups'),
       subscribers: cardValue('Subscribers'),
@@ -394,11 +406,12 @@ const readState = (page) =>
       firstCreator: document.querySelector('tbody tr td:nth-child(2)')?.textContent ?? null,
       rowCount: document.querySelectorAll('tbody tr').length,
       dots: document.querySelectorAll('svg circle').length,
-      signUpBarSum: +signUpBars.reduce((a, r) => a + Number(r.getAttribute('height')), 0).toFixed(1),
+      signUpBarSum: +signUpBars.reduce((a, r) => a + h(r), 0).toFixed(1),
       barsWidth50: rects.every((r) => Number(r.getAttribute('width')) === 50),
-      barsOnBaseline: rects.every(
-        (r) => Math.abs(Number(r.getAttribute('y')) + Number(r.getAttribute('height')) - 281) < 0.5,
-      ),
+      barsOnBaseline: rects.every((r) => Math.abs(Number(r.getAttribute('y')) + h(r) - 281) < 0.5),
+      signupGEsub: signUpBars.every((r, i) => h(r) >= h(subBars[i]) - 0.01),
+      allBarsPositive: rects.every((r) => h(r) > 0),
+      tableHasZero: bodyTexts.includes('$0') || bodyTexts.includes('-'),
       scrollW: document.documentElement.scrollWidth,
       clientW: document.documentElement.clientWidth,
     }
@@ -450,9 +463,13 @@ const addCreatorFlow = async (page) => {
   ok('new row shows a New badge', badge.text === 'New', `${badge.text}`)
   ok('badge is on the top row', badge.inFirstRow)
 
+  ok('Subscribers incremented', Number(after.subscribers) === Number(before.subscribers) + 1, `${before.subscribers} -> ${after.subscribers}`)
   ok('chart reacted (bar heights changed)', after.signUpBarSum !== before.signUpBarSum, `${before.signUpBarSum} -> ${after.signUpBarSum}`)
   ok('bars still 50 wide', after.barsWidth50)
   ok('bars still on baseline', after.barsOnBaseline)
+  ok('sign-up still >= subscriber after add', after.signupGEsub)
+  ok('no zero bars after add', after.allBarsPositive)
+  ok('no zero cells in table after add', !after.tableHasZero)
   ok('no horizontal overflow', after.scrollW <= after.clientW, `${after.scrollW} <= ${after.clientW}`)
 
   // A second add keeps compounding.
@@ -462,14 +479,37 @@ const addCreatorFlow = async (page) => {
   ok('Sign-ups incremented again', Number(third.signUps) === Number(after.signUps) + 1, `${after.signUps} -> ${third.signUps}`)
 }
 
+/** Delete: the row, the summary and the chart must all react. */
+const deleteFlow = async (page) => {
+  console.log('-- delete creator')
+  const before = await readState(page)
+  await page.click('tbody tr:first-child [class*="deleteButton"]')
+  await page.waitForTimeout(700)
+  const after = await readState(page)
+
+  ok('Subscribers decremented', Number(after.subscribers) === Number(before.subscribers) - 1, `${before.subscribers} -> ${after.subscribers}`)
+  ok('Sign-ups decreased', Number(after.signUps) < Number(before.signUps), `${before.signUps} -> ${after.signUps}`)
+  ok('a row was removed / changed', after.rowCount < before.rowCount || after.firstCreator !== before.firstCreator)
+  ok('chart reacted', after.signUpBarSum !== before.signUpBarSum || after.dots !== before.dots, `${before.signUpBarSum}/${before.dots} -> ${after.signUpBarSum}/${after.dots}`)
+  ok('bars stay on baseline after delete', after.barsOnBaseline)
+  ok('sign-up still >= subscriber after delete', after.signupGEsub)
+  ok('no zero bars after delete', after.allBarsPositive)
+  ok('no zero cells in table after delete', !after.tableHasZero)
+  ok('no horizontal overflow', after.scrollW <= after.clientW)
+}
+
 const sameState = (a, b) =>
   a.signUps === b.signUps && a.firstCreator === b.firstCreator && a.dots === b.dots && a.signUpBarSum === b.signUpBarSum
 
 /** Date tabs: each range repopulates the table, summary and chart. */
 const dateTabFlow = async (page) => {
-  // The default view (Last 7 days) is the pinned design data.
+  // The default view (Last 7 days) is the fixed default: 6 columns, and the
+  // rules (sign-up >= subscriber, no zero bars/cells) hold from the start.
   const before = await readState(page)
-  ok('starts on the design default', before.signUps === '5' && before.dots === 6, `${before.signUps}, ${before.dots} dots`)
+  ok('starts on the fixed default (6 columns)', before.dots === 6, `${before.dots} dots`)
+  ok('default: sign-up >= subscriber', before.signupGEsub)
+  ok('default: no zero bars', before.allBarsPositive)
+  ok('default: no zero cells in table', !before.tableHasZero)
 
   console.log('-- re-click the active tab (Last 7 days)')
   await page.click('text=Last 7 days')
@@ -484,6 +524,9 @@ const dateTabFlow = async (page) => {
   ok('Today reconfigures the chart to 1 column', today.dots === 1, `${today.dots} dots`)
   ok('Today bars 50 wide', today.barsWidth50)
   ok('Today bars on baseline', today.barsOnBaseline)
+  ok('Today sign-up >= subscriber', today.signupGEsub)
+  ok('Today no zero bars', today.allBarsPositive)
+  ok('Today no zero cells', !today.tableHasZero)
   ok('Today data differs from initial', today.firstCreator !== before.firstCreator || today.signUps !== before.signUps)
   ok('Today no horizontal overflow', today.scrollW <= today.clientW)
 
@@ -494,6 +537,9 @@ const dateTabFlow = async (page) => {
   ok('This Month uses weekly columns', month.dots >= 4, `${month.dots} dots`)
   ok('This Month bars 50 wide', month.barsWidth50)
   ok('This Month bars on baseline', month.barsOnBaseline)
+  ok('This Month sign-up >= subscriber', month.signupGEsub)
+  ok('This Month no zero bars', month.allBarsPositive)
+  ok('This Month no zero cells', !month.tableHasZero)
   ok('This Month no horizontal overflow', month.scrollW <= month.clientW)
 
   console.log('-- date tab: Last Month')
@@ -514,7 +560,7 @@ const dateTabFlow = async (page) => {
   await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const week = await readState(page)
   ok('Last 7 days restores the exact default', sameState(week, before), `${week.signUps}/${week.firstCreator}/${week.dots}`)
-  ok('default is still the design data', week.signUps === '5' && week.dots === 6, `${week.signUps}, ${week.dots} dots`)
+  ok('default still has 6 columns', week.dots === 6, `${week.dots} dots`)
   ok('Last 7 days no horizontal overflow', week.scrollW <= week.clientW)
 }
 
@@ -528,6 +574,7 @@ const RUNS = [
   { route: '/', name: 'report-390x844', width: 390, height: 844, spec: responsiveSpec },
   { route: '/', name: 'report-320x568', width: 320, height: 568, spec: responsiveSpec },
   { route: '/', name: 'flow-add-creator', width: 1440, height: 900, interaction: addCreatorFlow },
+  { route: '/', name: 'flow-delete-creator', width: 1440, height: 900, interaction: deleteFlow },
   { route: '/', name: 'flow-date-tabs', width: 1440, height: 900, interaction: dateTabFlow },
 ]
 

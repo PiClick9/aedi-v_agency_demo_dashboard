@@ -1,8 +1,13 @@
 /** Data model and generators for the Creator Sign-up Report (Figma 3910:19916).
  *
- * The initial state reproduces the design exactly. Interactions (date-range
- * tabs, Add Creator, Delete) generate or mutate data, and the summary cards
- * and chart are derived from it so everything reacts together. */
+ * Rules that shape the model:
+ *  - The table lists only paying creators, so no row ever shows $0 or "-".
+ *  - In the chart, sign-ups = subscribers + a per-day lead surplus (>= 1), so
+ *    the sign-up bar is always taller than the subscriber bar.
+ *  - Days with no subscriber are dropped, so the chart never draws a 0 column.
+ *
+ * The default view is fixed and deterministic; interactions generate or mutate
+ * data, and the summary cards and chart derive from it so everything reacts. */
 
 export type Creator = {
   id: number
@@ -16,13 +21,15 @@ export type Creator = {
   markup: string
   amountNum: number
   markupNum: number
-  subscribed: boolean
 }
 
-/** One column of the chart: a day (daily ranges) or a week (month ranges). */
+/** A day/week column: `extra` is the non-subscriber lead surplus for that day. */
+export type BucketDef = { label: string; dateStr: string; extra: number }
+
+/** A resolved chart column (subscribers folded in). */
 export type Bucket = {
-  label: string // axis label, e.g. "07/22"
-  dateStr: string // representative date for new rows, e.g. "2026.07.22"
+  label: string
+  dateStr: string
   signUps: number
   subscribers: number
   markup: number
@@ -50,7 +57,7 @@ const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - 
 const round2 = (n: number) => Math.round(n * 100) / 100
 const pad = (n: number) => String(n).padStart(2, '0')
 
-const money = (n: number) => (n === 0 ? '$0' : `$${n.toFixed(2)}`)
+const money = (n: number) => `$${n.toFixed(2)}`
 /** Summary money drops trailing zeros, as the design does ($68.2, not $68.20). */
 const moneySum = (n: number) => `$${n.toFixed(2).replace(/\.?0+$/, '') || '0'}`
 
@@ -62,66 +69,51 @@ const nextCreatorName = (creators: Creator[]) => {
   return `Creator${max + 1}`
 }
 
-/* --------------------------------------------------------------- initial -- */
+/* -------------------------------------------------------------- creators -- */
 
-const mk = (
-  id: number,
-  signUpDate: string,
-  creator: string,
-  subscribed: boolean,
-  startDate: string,
-  lastPayment: string,
-  amountNum: number,
-): Creator => ({
+/** Every creator is a paying subscriber — so no zero rows reach the table. */
+const makeCreatorRow = (id: number, name: string, def: BucketDef, amountNum: number): Creator => ({
   id,
-  signUpDate,
-  creator,
+  signUpDate: def.dateStr,
+  creator: name,
   promoCredit: '60:00',
-  startDate,
-  plan: subscribed ? 'Standard' : '-',
-  lastPayment,
+  startDate: def.dateStr,
+  plan: 'Standard',
+  lastPayment: def.dateStr,
   amount: money(amountNum),
   markup: money(round2(amountNum * 0.2)),
   amountNum,
   markupNum: round2(amountNum * 0.2),
-  subscribed,
 })
 
-export const INITIAL_CREATORS: Creator[] = [
-  mk(5, '2026.07.27', 'Creator5', false, '-', '-', 0),
-  mk(4, '2026.07.26', 'Creator4', true, '2026.07.29', '2026.07.26', 17.05),
-  mk(3, '2026.07.22', 'Creator3', true, '2026.07.26', '2026.07.26', 17.05),
-  mk(2, '2026.07.22', 'Creator2', true, '2026.07.26', '2026.07.26', 17.05),
-  mk(1, '2026.07.22', 'Creator1', true, '2026.07.26', '2026.07.26', 17.05),
-]
+const randomAmount = () => round2(17.05 * randInt(1, 3))
 
-/** Chart series for the initial view. Independent of the five table rows, as
-    in the design — chosen so the layout reproduces the design's bar shape. */
-export const INITIAL_BUCKETS: Bucket[] = [
-  { label: '07/22', dateStr: '2026.07.22', signUps: 4, subscribers: 7, markup: 23 },
-  { label: '07/23', dateStr: '2026.07.23', signUps: 7, subscribers: 2, markup: 78 },
-  { label: '07/24', dateStr: '2026.07.24', signUps: 6, subscribers: 2, markup: 40 },
-  { label: '07/25', dateStr: '2026.07.25', signUps: 8, subscribers: 5, markup: 143 },
-  { label: '07/26', dateStr: '2026.07.26', signUps: 6, subscribers: 5, markup: 138 },
-  { label: '07/27', dateStr: '2026.07.27', signUps: 2, subscribers: 10, markup: 85 },
-]
+/* --------------------------------------------------------------- derive -- */
 
-/** Exact design strings, so the initial render matches the audit spec. */
-export const INITIAL_CARDS: Card[] = [
-  { label: 'Sign-ups', value: '5', delta: '3', accent: ACCENTS[0] },
-  { label: 'Subscribers', value: '4', delta: '0', accent: ACCENTS[1] },
-  { label: 'Conversion Rate', value: '80%', delta: '0%', accent: ACCENTS[2] },
-  { label: 'Payment Amount', value: '$68.2', delta: '$51.15', accent: ACCENTS[3] },
-  { label: 'Markup', value: '$13.64', delta: '$10.23', accent: ACCENTS[4] },
-]
-
-/* ------------------------------------------------------------ summaries -- */
+/** Resolve chart columns from creators + day definitions. Days with no
+    subscriber are dropped, and sign-ups = subscribers + lead surplus. */
+export const deriveChart = (creators: Creator[], defs: BucketDef[]): Bucket[] =>
+  defs
+    .map((def) => {
+      const inDay = creators.filter((c) => c.signUpDate === def.dateStr)
+      const subscribers = inDay.length
+      if (subscribers === 0) return null // no 0 columns
+      return {
+        label: def.label,
+        dateStr: def.dateStr,
+        subscribers,
+        signUps: subscribers + def.extra, // always > subscribers
+        markup: round2(inDay.reduce((s, c) => s + c.markupNum, 0)),
+      }
+    })
+    .filter((b): b is Bucket => b !== null)
 
 export type Values = { signUps: number; subs: number; conv: number; payment: number; markup: number }
 
-export const computeValues = (creators: Creator[]): Values => {
-  const signUps = creators.length
-  const subs = creators.filter((c) => c.subscribed).length
+export const deriveValues = (creators: Creator[], defs: BucketDef[]): Values => {
+  const chart = deriveChart(creators, defs)
+  const signUps = chart.reduce((s, b) => s + b.signUps, 0)
+  const subs = creators.length
   return {
     signUps,
     subs,
@@ -131,7 +123,6 @@ export const computeValues = (creators: Creator[]): Values => {
   }
 }
 
-/** `prev` fills the small delta line under each card (the "previous period"). */
 export const buildCards = (v: Values, prev: Values): Card[] => [
   { label: 'Sign-ups', value: `${v.signUps}`, delta: `${prev.signUps}`, accent: ACCENTS[0] },
   { label: 'Subscribers', value: `${v.subs}`, delta: `${prev.subs}`, accent: ACCENTS[1] },
@@ -148,109 +139,112 @@ const priorOf = (v: Values): Values => ({
   markup: round2(v.markup * 0.75),
 })
 
-/* ------------------------------------------------------------- creators -- */
-
-const makeCreatorRow = (id: number, name: string, bucket: Bucket): Creator => {
-  const subscribed = Math.random() < 0.8
-  const amountNum = subscribed ? round2(17.05 * randInt(1, 3)) : 0
-  return mk(
-    id,
-    bucket.dateStr,
-    name,
-    subscribed,
-    subscribed ? bucket.dateStr : '-',
-    subscribed ? bucket.dateStr : '-',
-    amountNum,
-  )
+export const cardsFor = (creators: Creator[], defs: BucketDef[], prev?: Values): Card[] => {
+  const values = deriveValues(creators, defs)
+  return buildCards(values, prev ?? priorOf(values))
 }
 
-/** A single new creator for Add Creator, plus the bucket it belongs to. */
-export const makeCreator = (creators: Creator[], buckets: Bucket[]) => {
-  const bucketIndex = randInt(0, buckets.length - 1)
+/* --------------------------------------------------------------- mutate -- */
+
+/** A new paying creator, placed in a day that already has subscribers so the
+    Sign-ups total moves by exactly one. */
+export const makeCreator = (creators: Creator[], defs: BucketDef[]): Creator => {
+  const active = defs.filter((d) => creators.some((c) => c.signUpDate === d.dateStr))
+  const pool = active.length ? active : defs
+  const def = pool[randInt(0, pool.length - 1)]
   const id = creators.reduce((m, c) => Math.max(m, c.id), 0) + 1
-  const creator = makeCreatorRow(id, nextCreatorName(creators), buckets[bucketIndex])
-  return { creator, bucketIndex }
+  return makeCreatorRow(id, nextCreatorName(creators), def, randomAmount())
 }
 
-/** Fold a creator into a bucket so the chart reflects the added row. */
-export const bumpBucket = (buckets: Bucket[], index: number, creator: Creator): Bucket[] =>
-  buckets.map((b, i) =>
-    i === index
-      ? {
-          ...b,
-          signUps: b.signUps + 1,
-          subscribers: b.subscribers + (creator.subscribed ? 1 : 0),
-          markup: b.markup + creator.markupNum,
-        }
-      : b,
-  )
-
-/* ----------------------------------------------------------- generation -- */
+/* ------------------------------------------------------------- generation -- */
 
 // Fixed reference date so ranges are stable within a session.
 const TODAY = new Date('2026-07-21T00:00:00')
 
-const dayBucket = (d: Date): Bucket => ({
+const dayDef = (d: Date): BucketDef => ({
   label: `${pad(d.getMonth() + 1)}/${pad(d.getDate())}`,
   dateStr: `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`,
-  signUps: 0,
-  subscribers: 0,
-  markup: 0,
+  extra: randInt(3, 8),
 })
 
-const weekBuckets = (year: number, month: number): Bucket[] => {
+const weekDefs = (year: number, month: number): BucketDef[] => {
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const buckets: Bucket[] = []
-  for (let start = 1; start <= daysInMonth; start += 7) {
-    buckets.push(dayBucket(new Date(year, month, start)))
-  }
-  return buckets
+  const defs: BucketDef[] = []
+  for (let start = 1; start <= daysInMonth; start += 7) defs.push(dayDef(new Date(year, month, start)))
+  return defs
 }
 
-const rangeBuckets = (range: Range): Bucket[] => {
-  if (range === 'Today') return [dayBucket(TODAY)]
+const rangeDefs = (range: Range): BucketDef[] => {
+  if (range === 'Today') return [dayDef(TODAY)]
   if (range === 'Last 7 days') {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(TODAY)
       d.setDate(TODAY.getDate() - (6 - i))
-      return dayBucket(d)
+      return dayDef(d)
     })
   }
-  if (range === 'This Month') return weekBuckets(TODAY.getFullYear(), TODAY.getMonth())
+  if (range === 'This Month') return weekDefs(TODAY.getFullYear(), TODAY.getMonth())
   const prev = new Date(TODAY.getFullYear(), TODAY.getMonth() - 1, 1)
-  return weekBuckets(prev.getFullYear(), prev.getMonth())
+  return weekDefs(prev.getFullYear(), prev.getMonth())
 }
 
 const CREATOR_COUNT: Record<Range, [number, number]> = {
-  Today: [1, 4],
-  'Last 7 days': [6, 12],
-  'This Month': [12, 28],
-  'Last Month': [12, 28],
+  Today: [2, 5],
+  'Last 7 days': [9, 14],
+  'This Month': [14, 28],
+  'Last Month': [14, 28],
 }
 
-/** Build a full, coherent dataset for a date range: creators bucketed by
-    sign-up date, summary and chart series derived from them. */
-export const generateDataset = (range: Range) => {
-  const buckets = rangeBuckets(range).map((b) => ({ ...b }))
+export type Dataset = { creators: Creator[]; defs: BucketDef[]; cards: Card[] }
+
+/** Build a coherent dataset for a date range: paying creators spread across
+    the days, every day seeded with at least one so no column is empty. */
+export const generateDataset = (range: Range): Dataset => {
+  const defs = rangeDefs(range)
   const [lo, hi] = CREATOR_COUNT[range]
-  const count = randInt(lo, hi)
+  const count = Math.max(defs.length, randInt(lo, hi))
 
   const creators: Creator[] = []
-  for (let i = 0; i < count; i++) {
-    const bi = randInt(0, buckets.length - 1)
-    const c = makeCreatorRow(i + 1, `Creator${i + 1}`, buckets[bi])
-    creators.push(c)
-    buckets[bi].signUps += 1
-    if (c.subscribed) {
-      buckets[bi].subscribers += 1
-      buckets[bi].markup += c.markupNum
-    }
+  let id = 1
+  // Seed one per day, then scatter the rest — keeps every column populated.
+  defs.forEach((def) => creators.push(makeCreatorRow(id++, `Creator${id - 1}`, def, randomAmount())))
+  for (let i = creators.length; i < count; i++) {
+    const def = defs[randInt(0, defs.length - 1)]
+    creators.push(makeCreatorRow(id++, `Creator${id - 1}`, def, randomAmount()))
   }
 
   creators.sort((a, b) => (a.signUpDate < b.signUpDate ? 1 : -1))
-  const values = computeValues(creators)
-  return { creators, buckets, cards: buildCards(values, priorOf(values)) }
+  return { creators, defs, cards: cardsFor(creators, defs) }
 }
+
+/* --------------------------------------------------------------- initial -- */
+
+// Fixed default (Last 7 days). Small lead surplus per day keeps sign-ups above
+// subscribers; all six days carry a subscriber so all six columns render.
+export const INITIAL_DEFS: BucketDef[] = [
+  { label: '07/22', dateStr: '2026.07.22', extra: 5 },
+  { label: '07/23', dateStr: '2026.07.23', extra: 7 },
+  { label: '07/24', dateStr: '2026.07.24', extra: 6 },
+  { label: '07/25', dateStr: '2026.07.25', extra: 8 },
+  { label: '07/26', dateStr: '2026.07.26', extra: 6 },
+  { label: '07/27', dateStr: '2026.07.27', extra: 4 },
+]
+
+const initialRow = (id: number, dateStr: string, amountNum: number): Creator =>
+  makeCreatorRow(id, `Creator${id}`, { label: '', dateStr, extra: 0 }, amountNum)
+
+export const INITIAL_CREATORS: Creator[] = [
+  initialRow(8, '2026.07.27', 17.05),
+  initialRow(7, '2026.07.27', 34.1),
+  initialRow(6, '2026.07.26', 17.05),
+  initialRow(5, '2026.07.25', 17.05),
+  initialRow(4, '2026.07.25', 34.1),
+  initialRow(3, '2026.07.24', 17.05),
+  initialRow(2, '2026.07.23', 17.05),
+  initialRow(1, '2026.07.22', 17.05),
+]
+
+export const INITIAL_CARDS: Card[] = cardsFor(INITIAL_CREATORS, INITIAL_DEFS)
 
 /* --------------------------------------------------------------- layout -- */
 
