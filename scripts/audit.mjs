@@ -427,9 +427,20 @@ const addCreatorFlow = async (page) => {
   ok('Sign-ups incremented again', Number(third.signUps) === Number(after.signUps) + 1, `${after.signUps} -> ${third.signUps}`)
 }
 
+const sameState = (a, b) =>
+  a.signUps === b.signUps && a.firstCreator === b.firstCreator && a.dots === b.dots && a.signUpBarSum === b.signUpBarSum
+
 /** Date tabs: each range repopulates the table, summary and chart. */
 const dateTabFlow = async (page) => {
+  // The default view (Last 7 days) is the pinned design data.
   const before = await readState(page)
+  ok('starts on the design default', before.signUps === '5' && before.dots === 6, `${before.signUps}, ${before.dots} dots`)
+
+  console.log('-- re-click the active tab (Last 7 days)')
+  await page.click('text=Last 7 days')
+  await page.waitForTimeout(150)
+  const afterReclick = await readState(page)
+  ok('re-clicking the active tab changes nothing', sameState(afterReclick, before), `${before.firstCreator} vs ${afterReclick.firstCreator}`)
 
   console.log('-- date tab: Today')
   await page.click('text=Today')
@@ -457,11 +468,18 @@ const dateTabFlow = async (page) => {
   ok('Last Month uses weekly columns', last.dots >= 4, `${last.dots} dots`)
   ok('Last Month bars on baseline', last.barsOnBaseline)
 
-  console.log('-- date tab: back to Last 7 days')
+  console.log('-- return to Today (cached, must be unchanged)')
+  await page.click('text=Today')
+  await page.waitForTimeout(150)
+  const todayAgain = await readState(page)
+  ok('returning to Today shows the same data', sameState(todayAgain, today), `${today.firstCreator} vs ${todayAgain.firstCreator}`)
+
+  console.log('-- return to Last 7 days (must restore the design default)')
   await page.click('text=Last 7 days')
   await page.waitForTimeout(150)
   const week = await readState(page)
-  ok('Last 7 days uses up to 7 columns', week.dots >= 1 && week.dots <= 7, `${week.dots} dots`)
+  ok('Last 7 days restores the exact default', sameState(week, before), `${week.signUps}/${week.firstCreator}/${week.dots}`)
+  ok('default is still the design data', week.signUps === '5' && week.dots === 6, `${week.signUps}, ${week.dots} dots`)
   ok('Last 7 days no horizontal overflow', week.scrollW <= week.clientW)
 }
 

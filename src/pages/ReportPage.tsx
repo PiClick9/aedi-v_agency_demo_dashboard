@@ -30,14 +30,23 @@ import styles from './ReportPage.module.css'
 
 const PAGE_SIZE = 5
 
+type Dataset = { creators: Creator[]; buckets: Bucket[]; cards: Card[] }
+
+// "Last 7 days" is the default and is pinned to the exact design data. Other
+// ranges are generated once, on first visit, then cached — so re-clicking an
+// active tab does nothing and returning to a tab shows the same data.
+const INITIAL_DATASETS: Partial<Record<Range, Dataset>> = {
+  'Last 7 days': { creators: INITIAL_CREATORS, buckets: INITIAL_BUCKETS, cards: INITIAL_CARDS },
+}
+
 /** "보고서 영문" — Creator Sign-up Report (Figma node 3910:19916). */
 export default function ReportPage() {
   const [range, setRange] = useState<Range>('Last 7 days')
   const [graphTab, setGraphTab] = useState<string>('Daily')
-  const [creators, setCreators] = useState<Creator[]>(INITIAL_CREATORS)
-  const [buckets, setBuckets] = useState<Bucket[]>(INITIAL_BUCKETS)
-  const [cards, setCards] = useState<Card[]>(INITIAL_CARDS)
+  const [datasets, setDatasets] = useState<Partial<Record<Range, Dataset>>>(INITIAL_DATASETS)
   const [page, setPage] = useState(1)
+
+  const { creators, buckets, cards } = datasets[range]!
 
   const pageCount = Math.max(1, Math.ceil(creators.length / PAGE_SIZE))
   const current = Math.min(page, pageCount)
@@ -46,31 +55,33 @@ export default function ReportPage() {
     [creators, current],
   )
 
-  // Clicking a range assumes a fresh population of creators for that window.
   const selectRange = (next: Range) => {
+    if (next === range) return // already active — nothing to change
+    // Generate a range's data only the first time it is opened; keep it after.
+    setDatasets((prev) => (prev[next] ? prev : { ...prev, [next]: generateDataset(next) }))
     setRange(next)
-    const ds = generateDataset(next)
-    setCreators(ds.creators)
-    setBuckets(ds.buckets)
-    setCards(ds.cards)
     setPage(1)
   }
+
+  const updateCurrent = (dataset: Dataset) =>
+    setDatasets((prev) => ({ ...prev, [range]: dataset }))
 
   const addCreator = () => {
     const prev = computeValues(creators)
     const { creator, bucketIndex } = makeCreator(creators, buckets)
     const nextCreators = [creator, ...creators]
-    setCreators(nextCreators)
-    setBuckets(bumpBucket(buckets, bucketIndex, creator))
-    setCards(buildCards(computeValues(nextCreators), prev))
+    updateCurrent({
+      creators: nextCreators,
+      buckets: bumpBucket(buckets, bucketIndex, creator),
+      cards: buildCards(computeValues(nextCreators), prev),
+    })
     setPage(1)
   }
 
   const deleteCreator = (id: number) => {
     const prev = computeValues(creators)
     const nextCreators = creators.filter((c) => c.id !== id)
-    setCreators(nextCreators)
-    setCards(buildCards(computeValues(nextCreators), prev))
+    updateCurrent({ creators: nextCreators, buckets, cards: buildCards(computeValues(nextCreators), prev) })
   }
 
   const goToPage = (p: number) => setPage(Math.min(pageCount, Math.max(1, p)))
