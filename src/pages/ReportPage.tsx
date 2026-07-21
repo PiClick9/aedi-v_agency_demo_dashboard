@@ -18,7 +18,6 @@ import {
   type Range,
 } from '../data/report'
 import chevron from '../assets/icon-chevron.svg'
-import download from '../assets/icon-download.svg'
 import add from '../assets/icon-add.svg'
 import pageFirst from '../assets/icon-page-first.svg'
 import pagePrev from '../assets/icon-page-prev.svg'
@@ -247,12 +246,6 @@ export default function ReportPage() {
 
         <section>
           <div className={styles.actions}>
-            <button type="button" className={styles.exportButton}>
-              <span className={`${styles.buttonIcon} ${styles.iconDownload}`}>
-                <img src={download} alt="" />
-              </span>
-              Export CSV
-            </button>
             <button type="button" className={styles.addButton} onClick={addCreator}>
               <span className={`${styles.buttonIcon} ${styles.iconAdd}`}>
                 <img src={add} alt="" />

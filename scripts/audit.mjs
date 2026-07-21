@@ -144,10 +144,8 @@ const probe = () => {
     legendItems: qa('legendItem').length,
 
     actions: box(q('actions')),
-    exportButton: box(q('exportButton')),
     addButton: box(q('addButton')),
     addButtonStyle: style(q('addButton'), ['backgroundColor', 'color', 'borderTopLeftRadius']),
-    exportButtonStyle: style(q('exportButton'), ['backgroundColor', 'color', 'borderTopWidth', 'borderTopColor']),
 
     table: box(document.querySelector('table')),
     headRow: box(document.querySelector('thead tr')),
@@ -170,7 +168,6 @@ const probe = () => {
     pagerArrows: qa('pagerArrow').length,
     // Figma insets each vector inside its icon box; filling the box reads heavy.
     iconSizes: {
-      download: box(document.querySelector('[class*="iconDownload"] img')),
       add: box(document.querySelector('[class*="iconAdd"] img')),
       pagerEnd: box(document.querySelector('[class*="pagerEnd"] img')),
       pagerStep: box(document.querySelector('[class*="pagerStep"] img')),
@@ -315,17 +312,12 @@ const reportSpec = (m) => {
   ok('subscriber ratio varies across days', spread >= 0.15, `spread ${(spread * 100).toFixed(0)}%`)
 
   console.log('-- actions')
-  near('export button w', m.exportButton.w, 126)
-  near('export button h', m.exportButton.h, 40)
+  ok('only the Add Creator button remains', m.exportButton === undefined)
   near('add button w', m.addButton.w, 130)
   near('add button h', m.addButton.h, 40)
-  near('button gap', m.addButton.x - (m.exportButton.x + m.exportButton.w), 16)
-  near('actions w', m.exportButton.w + 16 + m.addButton.w, 272)
   eq('add button bg', m.addButtonStyle.backgroundColor, 'rgb(26, 26, 26)')
   eq('add button colour', m.addButtonStyle.color, 'rgb(255, 255, 255)')
   near('add button radius', parseFloat(m.addButtonStyle.borderTopLeftRadius), 5)
-  eq('export button bg', m.exportButtonStyle.backgroundColor, 'rgb(255, 255, 255)')
-  eq('export button border', m.exportButtonStyle.borderTopColor, 'rgb(228, 231, 234)')
   ok('actions right-aligned', Math.abs(m.addButton.x + m.addButton.w - (m.content.x + m.content.w - 60)) < 1)
 
   console.log('-- table')
@@ -360,7 +352,6 @@ const reportSpec = (m) => {
   ok('4 pager arrows', m.pagerArrows === 4, `${m.pagerArrows}`)
 
   console.log('-- icon insets')
-  near('download icon', m.iconSizes.download.w, 11.87, 0.2)
   near('add icon', m.iconSizes.add.w, 10.67, 0.2)
   near('pager end icon w', m.iconSizes.pagerEnd.w, 18)
   near('pager end icon h', m.iconSizes.pagerEnd.h, 18)

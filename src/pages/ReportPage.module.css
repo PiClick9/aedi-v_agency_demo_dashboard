@@ -402,14 +402,6 @@
   white-space: nowrap;
 }
 
-.exportButton {
-  composes: buttonBase;
-  width: 126px;
-  color: var(--color-text-base);
-  background: var(--color-btn-tertiary-fill);
-  border: var(--border-width-thin) solid var(--color-btn-tertiary-border);
-}
-
 .addButton {
   composes: buttonBase;
   width: 130px;
@@ -430,11 +422,6 @@
 
 .buttonIcon > img {
   display: block;
-}
-
-.iconDownload > img {
-  width: 11.87px; /* inset 12.92% */
-  height: 11.87px;
 }
 
 .iconAdd > img {
