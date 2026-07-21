@@ -466,6 +466,32 @@
   font-size: var(--font-size-body-xlarge);
 }
 
+/* A newly added row flashes, then settles back to the resting row colour. */
+@keyframes rowFlash {
+  from {
+    background-color: rgba(41, 127, 255, 0.22);
+  }
+  to {
+    background-color: var(--color-surface-secondary-subtler);
+  }
+}
+
+.rowNew td {
+  animation: rowFlash 2.2s ease-out;
+}
+
+.newBadge {
+  margin-left: var(--spacing-2);
+  padding: 1px 8px;
+  font-size: var(--font-size-body-small);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+  color: var(--color-text-inverse);
+  background: var(--color-border-pd02);
+  border-radius: var(--radius-circle);
+  vertical-align: middle;
+}
+
 .deleteButton {
   height: var(--height-36);
   padding: 0 var(--spacing-3);

@@ -1,0 +1,27 @@
+/* Smoothly tween the plot when the data changes. These are SVG geometry
+   properties that Chromium animates as CSS properties; y and height share the
+   same easing so a bar's foot stays pinned to the baseline mid-transition. */
+.bar {
+  transition: x 0.6s ease, y 0.6s ease, height 0.6s ease;
+}
+
+.dot {
+  transition: cx 0.6s ease, cy 0.6s ease;
+}
+
+.line {
+  transition: d 0.6s ease;
+}
+
+.label {
+  transition: x 0.6s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar,
+  .dot,
+  .line,
+  .label {
+    transition: none;
+  }
+}

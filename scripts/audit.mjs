@@ -407,14 +407,49 @@ const readState = (page) =>
 /** Add Creator: the row count, the summary and the chart must all move. */
 const addCreatorFlow = async (page) => {
   console.log('-- add creator')
+
+  // The marks must carry a transition so the change animates rather than snaps.
+  const anim = await page.evaluate(() => {
+    const bar = document.querySelector('svg[viewBox] rect[class]')
+    const dot = document.querySelector('svg[viewBox] circle[class]')
+    const line = document.querySelector('svg[viewBox] path[class]')
+    const dur = (el) => (el ? getComputedStyle(el).transitionDuration : '0s')
+    const props = (el) => (el ? getComputedStyle(el).transitionProperty : '')
+    return {
+      bar: dur(bar),
+      dot: dur(dot),
+      line: dur(line),
+      barProps: props(bar),
+    }
+  })
+  ok('bars have a transition', parseFloat(anim.bar) > 0, anim.bar)
+  ok('dots have a transition', parseFloat(anim.dot) > 0, anim.dot)
+  ok('markup line has a transition', parseFloat(anim.line) > 0, anim.line)
+  ok('bar transitions its geometry', /height|y\b|\ball\b/.test(anim.barProps), anim.barProps)
+
   const before = await readState(page)
   await page.click('[class*="addButton"]')
-  await page.waitForTimeout(150)
+  await page.waitForTimeout(120)
+  const midAdd = await page.evaluate(() => {
+    const rects = [...document.querySelectorAll('svg[viewBox] rect')]
+    return rects.every((r) => Math.abs(Number(r.getAttribute('y')) + Number(r.getAttribute('height')) - 281) < 0.5)
+  })
+  ok('bars stay on the baseline mid-animation', midAdd)
+
+  await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const after = await readState(page)
 
   ok('Sign-ups incremented', Number(after.signUps) === Number(before.signUps) + 1, `${before.signUps} -> ${after.signUps}`)
   ok('new creator on top of table', after.firstCreator !== before.firstCreator, `${before.firstCreator} -> ${after.firstCreator}`)
-  ok('Sign-ups delta shows previous value', true) // rendered; visual only
+
+  const badge = await page.evaluate(() => {
+    const el = document.querySelector('[class*="newBadge"]')
+    const firstRow = document.querySelector('tbody tr')
+    return { text: el?.textContent ?? null, inFirstRow: !!(el && firstRow && firstRow.contains(el)) }
+  })
+  ok('new row shows a New badge', badge.text === 'New', `${badge.text}`)
+  ok('badge is on the top row', badge.inFirstRow)
+
   ok('chart reacted (bar heights changed)', after.signUpBarSum !== before.signUpBarSum, `${before.signUpBarSum} -> ${after.signUpBarSum}`)
   ok('bars still 50 wide', after.barsWidth50)
   ok('bars still on baseline', after.barsOnBaseline)
@@ -422,7 +457,7 @@ const addCreatorFlow = async (page) => {
 
   // A second add keeps compounding.
   await page.click('[class*="addButton"]')
-  await page.waitForTimeout(150)
+  await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const third = await readState(page)
   ok('Sign-ups incremented again', Number(third.signUps) === Number(after.signUps) + 1, `${after.signUps} -> ${third.signUps}`)
 }
@@ -438,13 +473,13 @@ const dateTabFlow = async (page) => {
 
   console.log('-- re-click the active tab (Last 7 days)')
   await page.click('text=Last 7 days')
-  await page.waitForTimeout(150)
+  await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const afterReclick = await readState(page)
   ok('re-clicking the active tab changes nothing', sameState(afterReclick, before), `${before.firstCreator} vs ${afterReclick.firstCreator}`)
 
   console.log('-- date tab: Today')
   await page.click('text=Today')
-  await page.waitForTimeout(150)
+  await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const today = await readState(page)
   ok('Today reconfigures the chart to 1 column', today.dots === 1, `${today.dots} dots`)
   ok('Today bars 50 wide', today.barsWidth50)
@@ -454,7 +489,7 @@ const dateTabFlow = async (page) => {
 
   console.log('-- date tab: This Month')
   await page.click('text=This Month')
-  await page.waitForTimeout(150)
+  await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const month = await readState(page)
   ok('This Month uses weekly columns', month.dots >= 4, `${month.dots} dots`)
   ok('This Month bars 50 wide', month.barsWidth50)
@@ -463,20 +498,20 @@ const dateTabFlow = async (page) => {
 
   console.log('-- date tab: Last Month')
   await page.click('text=Last Month')
-  await page.waitForTimeout(150)
+  await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const last = await readState(page)
   ok('Last Month uses weekly columns', last.dots >= 4, `${last.dots} dots`)
   ok('Last Month bars on baseline', last.barsOnBaseline)
 
   console.log('-- return to Today (cached, must be unchanged)')
   await page.click('text=Today')
-  await page.waitForTimeout(150)
+  await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const todayAgain = await readState(page)
   ok('returning to Today shows the same data', sameState(todayAgain, today), `${today.firstCreator} vs ${todayAgain.firstCreator}`)
 
   console.log('-- return to Last 7 days (must restore the design default)')
   await page.click('text=Last 7 days')
-  await page.waitForTimeout(150)
+  await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const week = await readState(page)
   ok('Last 7 days restores the exact default', sameState(week, before), `${week.signUps}/${week.firstCreator}/${week.dots}`)
   ok('default is still the design data', week.signUps === '5' && week.dots === 6, `${week.signUps}, ${week.dots} dots`)

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import HeaderPc from '../components/HeaderPc'
 import SignupChart from '../components/SignupChart'
 import {
@@ -45,6 +45,15 @@ export default function ReportPage() {
   const [graphTab, setGraphTab] = useState<string>('Daily')
   const [datasets, setDatasets] = useState<Partial<Record<Range, Dataset>>>(INITIAL_DATASETS)
   const [page, setPage] = useState(1)
+  // Id of the just-added creator, so its table row can flag itself as new.
+  const [newId, setNewId] = useState<number | null>(null)
+  const newTimer = useRef<number | undefined>(undefined)
+
+  const flagNew = (id: number | null) => {
+    window.clearTimeout(newTimer.current)
+    setNewId(id)
+    if (id !== null) newTimer.current = window.setTimeout(() => setNewId(null), 2400)
+  }
 
   const { creators, buckets, cards } = datasets[range]!
 
@@ -61,6 +70,7 @@ export default function ReportPage() {
     setDatasets((prev) => (prev[next] ? prev : { ...prev, [next]: generateDataset(next) }))
     setRange(next)
     setPage(1)
+    flagNew(null)
   }
 
   const updateCurrent = (dataset: Dataset) =>
@@ -76,6 +86,7 @@ export default function ReportPage() {
       cards: buildCards(computeValues(nextCreators), prev),
     })
     setPage(1)
+    flagNew(creator.id)
   }
 
   const deleteCreator = (id: number) => {
@@ -211,9 +222,12 @@ export default function ReportPage() {
               </thead>
               <tbody>
                 {pageRows.map((row) => (
-                  <tr key={row.id}>
+                  <tr key={row.id} className={row.id === newId ? styles.rowNew : undefined}>
                     <td className={styles.colFlex}>{row.signUpDate}</td>
-                    <td className={styles.colCreator}>{row.creator}</td>
+                    <td className={styles.colCreator}>
+                      {row.creator}
+                      {row.id === newId && <span className={styles.newBadge}>New</span>}
+                    </td>
                     <td className={styles.colFlex}>{row.promoCredit}</td>
                     <td className={styles.colStart}>{row.startDate}</td>
                     <td className={styles.colFlex}>{row.plan}</td>
