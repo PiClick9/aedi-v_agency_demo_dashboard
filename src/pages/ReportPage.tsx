@@ -5,16 +5,16 @@ import DatePicker from '../components/DatePicker'
 import {
   GRAPH_TABS,
   DATE_TABS,
-  INITIAL_CARDS,
-  INITIAL_CREATORS,
-  INITIAL_EXTRAS,
   cardsFor,
   deriveChart,
-  deriveValues,
-  generateDataset,
-  makeCreator,
-  type Dataset,
+  filterByRange,
+  generatePool,
+  makeCreatorAt,
+  matchPreset,
+  presetRange,
+  today,
   type GraphTab,
+  type Pool,
   type Range,
 } from '../data/report'
 import chevron from '../assets/icon-chevron.svg'
@@ -31,23 +31,21 @@ const PAGE_SIZE = 5
 
 const DATE_FIELDS = ['Sign-up Date', 'Subscription Start Date', 'Last Payment Date'] as const
 
-// Right field defaults to yesterday (relative to the app's 2026-07-21 "today");
-// left field to a week before that.
-const DEFAULT_END = '2026-07-20'
-const DEFAULT_START = '2026-07-13'
-
-// "Last 7 days" is the default and is pinned to fixed data. Other ranges are
-// generated once, on first visit, then cached — so re-clicking an active tab
-// does nothing and returning to a tab shows the same data.
-const INITIAL_DATASETS: Partial<Record<Range, Dataset>> = {
-  'Last 7 days': { creators: INITIAL_CREATORS, extras: INITIAL_EXTRAS, cards: INITIAL_CARDS },
-}
+// The default view is the "Last 7 days" preset ending on the real today.
+const DEFAULT_PRESET = presetRange('Last 7 days')
 
 /** "보고서 영문" — Creator Sign-up Report (Figma node 3910:19916). */
 export default function ReportPage() {
-  const [range, setRange] = useState<Range>('Last 7 days')
+  const todayStr = useMemo(() => {
+    const t = today()
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+  }, [])
+
   const [graphTab, setGraphTab] = useState<GraphTab>('Daily')
-  const [datasets, setDatasets] = useState<Partial<Record<Range, Dataset>>>(INITIAL_DATASETS)
+  // The pool of all creators; filtered by [startDate, endDate] for the view.
+  const [pool, setPool] = useState<Pool>(() => generatePool())
+  const [startDate, setStartDate] = useState(DEFAULT_PRESET.start)
+  const [endDate, setEndDate] = useState(DEFAULT_PRESET.end)
   const [page, setPage] = useState(1)
   // Id of the just-added creator, so its table row can flag itself as new.
   const [newId, setNewId] = useState<number | null>(null)
@@ -57,10 +55,6 @@ export default function ReportPage() {
   const [dateField, setDateField] = useState<string>(DATE_FIELDS[0])
   const [fieldOpen, setFieldOpen] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
-
-  // Date range calendars.
-  const [startDate, setStartDate] = useState(DEFAULT_START)
-  const [endDate, setEndDate] = useState(DEFAULT_END)
 
   useEffect(() => {
     if (!fieldOpen) return
@@ -82,8 +76,15 @@ export default function ReportPage() {
     if (id !== null) newTimer.current = window.setTimeout(() => setNewId(null), 2400)
   }
 
-  const { creators, extras, cards } = datasets[range]!
+  // The visible slice: pool filtered to the selected date range.
+  const creators = useMemo(
+    () => filterByRange(pool.creators, startDate, endDate),
+    [pool, startDate, endDate],
+  )
+  const extras = pool.extras
+  const range = matchPreset(startDate, endDate)
   const buckets = useMemo(() => deriveChart(creators, extras, graphTab), [creators, extras, graphTab])
+  const cards = useMemo(() => cardsFor(creators, extras), [creators, extras])
 
   const pageCount = Math.max(1, Math.ceil(creators.length / PAGE_SIZE))
   const current = Math.min(page, pageCount)
@@ -92,31 +93,37 @@ export default function ReportPage() {
     [creators, current],
   )
 
+  // A range tab is a preset for the calendars.
   const selectRange = (next: Range) => {
-    if (next === range) return // already active — nothing to change
-    // Generate a range's data only the first time it is opened; keep it after.
-    setDatasets((prev) => (prev[next] ? prev : { ...prev, [next]: generateDataset(next) }))
-    setRange(next)
+    const p = presetRange(next)
+    if (p.start === startDate && p.end === endDate) return // already active
+    setStartDate(p.start)
+    setEndDate(p.end)
     setPage(1)
     flagNew(null)
   }
 
-  const updateCurrent = (dataset: Dataset) =>
-    setDatasets((prev) => ({ ...prev, [range]: dataset }))
+  const changeStart = (v: string) => {
+    setStartDate(v)
+    setPage(1)
+    flagNew(null)
+  }
+  const changeEnd = (v: string) => {
+    setEndDate(v)
+    setPage(1)
+    flagNew(null)
+  }
 
   const addCreator = () => {
-    const prev = deriveValues(creators, extras)
-    const creator = makeCreator(creators)
-    const nextCreators = [creator, ...creators]
-    updateCurrent({ creators: nextCreators, extras, cards: cardsFor(nextCreators, extras, prev) })
+    // Land the new creator on the range's end day so it shows in the view.
+    const { creator, extras: nextExtras } = makeCreatorAt(pool, endDate)
+    setPool({ creators: [creator, ...pool.creators], extras: nextExtras })
     setPage(1)
     flagNew(creator.id)
   }
 
   const deleteCreator = (id: number) => {
-    const prev = deriveValues(creators, extras)
-    const nextCreators = creators.filter((c) => c.id !== id)
-    updateCurrent({ creators: nextCreators, extras, cards: cardsFor(nextCreators, extras, prev) })
+    setPool({ creators: pool.creators.filter((c) => c.id !== id), extras: pool.extras })
     flagNew(null)
   }
 
@@ -170,9 +177,9 @@ export default function ReportPage() {
             </div>
 
             <div className={styles.datepicker}>
-              <DatePicker value={startDate} onChange={setStartDate} max={endDate} ariaLabel="Start date" />
+              <DatePicker value={startDate} onChange={changeStart} max={endDate} ariaLabel="Start date" />
               <span className={styles.dateSeparator}>~</span>
-              <DatePicker value={endDate} onChange={setEndDate} min={startDate} ariaLabel="End date" />
+              <DatePicker value={endDate} onChange={changeEnd} min={startDate} max={todayStr} ariaLabel="End date" />
             </div>
 
             <div className={styles.dateTabs}>

@@ -289,14 +289,15 @@ const reportSpec = (m) => {
   near('chart w', m.chart.w, 1200)
   const signUps = m.bars.filter((b) => b.fill === 'rgb(6, 22, 105)')
   const subs = m.bars.filter((b) => b.fill === 'rgb(41, 127, 255)')
-  ok('6 sign-up bars', signUps.length === 6, `${signUps.length}`)
-  ok('6 subscriber bars', subs.length === 6, `${subs.length}`)
-  // Bars are one adaptive width; six columns are wide enough to hit the 50 cap.
+  // The default (Last 7 days) covers 7 days, and the pool fills every one.
+  ok('7 sign-up bars', signUps.length === 7, `${signUps.length}`)
+  ok('7 subscriber bars', subs.length === 7, `${subs.length}`)
+  ok('7 markup dots', m.dots === 7, `${m.dots}`)
+  // Bars are one adaptive width; seven columns are wide enough to hit the 50 cap.
   const w0 = m.bars[0].w
   ok('all bars share one width', m.bars.every((b) => Math.abs(b.w - w0) < 0.01), `${w0.toFixed(1)}`)
   ok('bar width within [4, 50]', w0 >= 4 && w0 <= 50, `${w0.toFixed(1)}`)
   ok('all bars share the 281 baseline', m.bars.every((b) => Math.abs(b.y + b.h - 281) < 0.01))
-  ok('6 markup dots', m.dots === 6, `${m.dots}`)
   ok('3 legend entries', m.legendItems === 3, `${m.legendItems}`)
   near('legend centre x', cx(m.legend), cx(m.chart), 1)
 
@@ -413,6 +414,8 @@ const readState = (page) =>
     return {
       signUps: cardValue('Sign-ups'),
       subscribers: cardValue('Subscribers'),
+      activeTab: document.querySelector('[class*="dateTabActive"]')?.textContent ?? 'none',
+      dateValues: [...document.querySelectorAll('[class*="dateValue"]')].map((e) => e.textContent),
       payment: cardValue('Payment Amount'),
       firstCreator: document.querySelector('tbody tr td:nth-child(2)')?.textContent ?? null,
       rowCount: document.querySelectorAll('tbody tr').length,
@@ -542,38 +545,56 @@ const dateFieldFlow = async (page) => {
   ok('box still 210 with long value', Math.abs((await page.locator('button[class*="select"]').first().boundingBox()).width - 210) < 0.75)
 }
 
-/** The date-range calendars: initial values, opening, picking, constraints. */
+// Real "today", matching the app's new Date().
+const pad2 = (n) => String(n).padStart(2, '0')
+const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+const T = (() => {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+})()
+
+/** The date-range calendars: real-today defaults, opening, picking, filtering. */
 const datePickerFlow = async (page) => {
   console.log('-- date range calendars')
   const values = () => page.locator('[class*="dateValue"]').allTextContents()
+  const dots = () => page.locator('svg circle').count()
+
+  const start6 = new Date(T)
+  start6.setDate(start6.getDate() - 6)
   const [start0, end0] = await values()
-  ok('right calendar defaults to yesterday', end0 === '2026-07-20', end0)
-  ok('left calendar defaults to a week before', start0 === '2026-07-13', start0)
+  ok('right calendar defaults to today', end0 === isoOf(T), `${end0} vs ${isoOf(T)}`)
+  ok('left calendar defaults to 6 days earlier', start0 === isoOf(start6), `${start0} vs ${isoOf(start6)}`)
   ok('no calendar open initially', (await page.locator('[class*="calPopup"]').count()) === 0)
+
+  const cols0 = await dots()
 
   // Open the end (right) calendar.
   await page.locator('button[class*="dateField"]').nth(1).click()
   ok('calendar opens on click', (await page.locator('[class*="calPopup"]').count()) === 1)
   ok('calendar renders day cells', (await page.locator('button[class*="calDay"]').count()) > 27)
-  ok('days before the start are disabled', await page.locator('button[class*="calDay"]', { hasText: /^5$/ }).first().isDisabled())
 
-  // Pick the 25th.
-  await page.locator('button[class*="calDay"]', { hasText: /^25$/ }).first().click()
-  await page.waitForTimeout(100)
-  const [, end1] = await values()
-  ok('picking a day updates the end value', end1 === '2026-07-25', end1)
-  ok('calendar closes after picking', (await page.locator('[class*="calPopup"]').count()) === 0)
+  const day = T.getDate()
+  const daysInMonth = new Date(T.getFullYear(), T.getMonth() + 1, 0).getDate()
+  if (day < daysInMonth) {
+    ok('future days are disabled', await page.locator('button[class*="calDay"]', { hasText: new RegExp(`^${day + 1}$`) }).first().isDisabled())
+  }
 
-  // Open the start (left) calendar; its max is now the new end.
-  await page.locator('button[class*="dateField"]').nth(0).click()
-  ok('days after the end are disabled', await page.locator('button[class*="calDay"]', { hasText: /^28$/ }).first().isDisabled())
-  await page.locator('button[class*="calDay"]', { hasText: /^10$/ }).first().click()
-  await page.waitForTimeout(100)
-  const [start1] = await values()
-  ok('picking a day updates the start value', start1 === '2026-07-10', start1)
+  if (day >= 2) {
+    // Pick yesterday: a valid, visible, earlier end → the range narrows.
+    await page.locator('button[class*="calDay"]', { hasText: new RegExp(`^${day - 1}$`) }).first().click()
+    await page.waitForTimeout(700)
+    const yest = new Date(T)
+    yest.setDate(day - 1)
+    const [, end1] = await values()
+    ok('picking an earlier end updates the value', end1 === isoOf(yest), `${end1} vs ${isoOf(yest)}`)
+    ok('calendar closes after picking', (await page.locator('[class*="calPopup"]').count()) === 0)
+    ok('narrowing the range filters to fewer columns', (await dots()) < cols0, `${await dots()} < ${cols0}`)
+    ok('a tab is no longer active for the custom range', (await page.locator('[class*="dateTabActive"]').count()) === 0)
+  }
 
   // Month navigation works.
-  await page.locator('button[class*="dateField"]').nth(1).click()
+  await page.locator('button[class*="dateField"]').nth(0).click()
   const title0 = await page.locator('[class*="calTitle"]').first().textContent()
   await page.locator('button[aria-label="Previous month"]').first().click()
   const title1 = await page.locator('[class*="calTitle"]').first().textContent()
@@ -584,10 +605,10 @@ const datePickerFlow = async (page) => {
 
 /** Date tabs: each range repopulates the table, summary and chart. */
 const dateTabFlow = async (page) => {
-  // The default view (Last 7 days) is the fixed default: 6 columns, and the
-  // rules (sign-up >= subscriber, no zero bars/cells) hold from the start.
+  // The default view is the Last 7 days preset (7 columns over the real week).
   const before = await readState(page)
-  ok('starts on the fixed default (6 columns)', before.dots === 6, `${before.dots} dots`)
+  ok('starts on the Last 7 days default (7 columns)', before.dots === 7, `${before.dots} dots`)
+  ok('Last 7 days tab is active', before.activeTab === 'Last 7 days', before.activeTab)
   ok('default: sign-up >= subscriber', before.signupGEsub)
   ok('default: no zero bars', before.allBarsPositive)
   ok('default: no zero cells in table', !before.tableHasZero)
@@ -603,12 +624,14 @@ const dateTabFlow = async (page) => {
   await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const today = await readState(page)
   ok('Today is one daily column', today.dots === 1, `${today.dots} dots`)
+  ok('Today sets both calendars to today', today.dateValues[0] === isoOf(T) && today.dateValues[1] === isoOf(T), today.dateValues.join(' ~ '))
+  ok('Today tab is active', today.activeTab === 'Today', today.activeTab)
   ok('Today bars share one width', today.barsEqualWidth)
   ok('Today bars are wide (few columns)', today.barW >= 20, `${today.barW.toFixed(1)}px`)
   ok('Today bars on baseline', today.barsOnBaseline)
   ok('Today sign-up >= subscriber', today.signupGEsub)
   ok('Today no zero cells', !today.tableHasZero)
-  ok('Today data differs from initial', today.firstCreator !== before.firstCreator || today.signUps !== before.signUps)
+  ok('Today filters to fewer rows than the week', Number(today.signUps) < Number(before.signUps), `${today.signUps} < ${before.signUps}`)
   ok('Today no horizontal overflow', today.scrollW <= today.clientW)
 
   console.log('-- Daily + This Month: every real day, thin bars')
@@ -651,8 +674,8 @@ const dateTabFlow = async (page) => {
   await page.click('text=Last 7 days')
   await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const week = await readState(page)
-  ok('Last 7 days restores the exact default', sameState(week, before), `${week.signUps}/${week.firstCreator}/${week.dots}`)
-  ok('default still has 6 columns', week.dots === 6, `${week.dots} dots`)
+  ok('Last 7 days restores the same default', sameState(week, before), `${week.signUps}/${week.firstCreator}/${week.dots}`)
+  ok('default still has 7 columns', week.dots === 7, `${week.dots} dots`)
   ok('Last 7 days no horizontal overflow', week.scrollW <= week.clientW)
 }
 
