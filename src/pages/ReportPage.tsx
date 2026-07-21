@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import HeaderPc from '../components/HeaderPc'
 import SignupChart from '../components/SignupChart'
+import DatePicker from '../components/DatePicker'
 import {
   GRAPH_TABS,
   DATE_TABS,
@@ -17,7 +18,6 @@ import {
   type Range,
 } from '../data/report'
 import chevron from '../assets/icon-chevron.svg'
-import calendar from '../assets/icon-calendar.svg'
 import download from '../assets/icon-download.svg'
 import add from '../assets/icon-add.svg'
 import pageFirst from '../assets/icon-page-first.svg'
@@ -30,6 +30,11 @@ import styles from './ReportPage.module.css'
 const PAGE_SIZE = 5
 
 const DATE_FIELDS = ['Sign-up Date', 'Subscription Start Date', 'Last Payment Date'] as const
+
+// Right field defaults to yesterday (relative to the app's 2026-07-21 "today");
+// left field to a week before that.
+const DEFAULT_END = '2026-07-20'
+const DEFAULT_START = '2026-07-13'
 
 // "Last 7 days" is the default and is pinned to fixed data. Other ranges are
 // generated once, on first visit, then cached — so re-clicking an active tab
@@ -52,6 +57,10 @@ export default function ReportPage() {
   const [dateField, setDateField] = useState<string>(DATE_FIELDS[0])
   const [fieldOpen, setFieldOpen] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
+
+  // Date range calendars.
+  const [startDate, setStartDate] = useState(DEFAULT_START)
+  const [endDate, setEndDate] = useState(DEFAULT_END)
 
   useEffect(() => {
     if (!fieldOpen) return
@@ -161,15 +170,9 @@ export default function ReportPage() {
             </div>
 
             <div className={styles.datepicker}>
-              <div className={styles.dateField}>
-                <img className={styles.calendarIcon} src={calendar} alt="" />
-                <span className={styles.dateValue}>2026-07-22</span>
-              </div>
+              <DatePicker value={startDate} onChange={setStartDate} max={endDate} ariaLabel="Start date" />
               <span className={styles.dateSeparator}>~</span>
-              <div className={styles.dateField}>
-                <img className={styles.calendarIcon} src={calendar} alt="" />
-                <span className={styles.dateValue}>2026-07-28</span>
-              </div>
+              <DatePicker value={endDate} onChange={setEndDate} min={startDate} ariaLabel="End date" />
             </div>
 
             <div className={styles.dateTabs}>

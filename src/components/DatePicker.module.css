@@ -1,0 +1,133 @@
+/* A date field (Figma Datepicker) plus a click-to-open month calendar. */
+
+.dateCell {
+  position: relative;
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.dateField {
+  width: 100%;
+  height: var(--height-48);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 0 var(--spacing-4);
+  font-family: inherit;
+  text-align: left;
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+}
+
+.calendarIcon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 18px;
+}
+
+.dateValue {
+  flex: 1 0 0;
+  min-width: 0;
+  font-size: var(--font-size-body-large);
+  line-height: var(--line-height-body);
+  color: var(--color-text-base);
+  white-space: nowrap;
+}
+
+.calPopup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  width: 268px;
+  padding: var(--spacing-3);
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-3);
+}
+
+.calHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-2);
+}
+
+.calTitle {
+  font-size: var(--font-size-body-medium);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-base);
+}
+
+.calNav {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-text-base);
+  background: none;
+  border: none;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.calNav:hover {
+  background: var(--color-surface-selected);
+}
+
+.calGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.calWeekday {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-body-small);
+  color: var(--color-icon-disabled-dark);
+}
+
+.calDay {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: var(--font-size-body-medium);
+  color: var(--color-text-base);
+  background: none;
+  border: none;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.calDay:hover {
+  background: var(--color-surface-selected);
+}
+
+.calDaySelected {
+  color: var(--color-text-inverse);
+  background: var(--color-surface-primary);
+}
+
+.calDaySelected:hover {
+  background: var(--color-surface-primary);
+}
+
+.calDay:disabled {
+  color: var(--color-icon-disabled);
+  cursor: default;
+}
+
+.calDay:disabled:hover {
+  background: none;
+}

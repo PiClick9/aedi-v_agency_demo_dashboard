@@ -542,6 +542,46 @@ const dateFieldFlow = async (page) => {
   ok('box still 210 with long value', Math.abs((await page.locator('button[class*="select"]').first().boundingBox()).width - 210) < 0.75)
 }
 
+/** The date-range calendars: initial values, opening, picking, constraints. */
+const datePickerFlow = async (page) => {
+  console.log('-- date range calendars')
+  const values = () => page.locator('[class*="dateValue"]').allTextContents()
+  const [start0, end0] = await values()
+  ok('right calendar defaults to yesterday', end0 === '2026-07-20', end0)
+  ok('left calendar defaults to a week before', start0 === '2026-07-13', start0)
+  ok('no calendar open initially', (await page.locator('[class*="calPopup"]').count()) === 0)
+
+  // Open the end (right) calendar.
+  await page.locator('button[class*="dateField"]').nth(1).click()
+  ok('calendar opens on click', (await page.locator('[class*="calPopup"]').count()) === 1)
+  ok('calendar renders day cells', (await page.locator('button[class*="calDay"]').count()) > 27)
+  ok('days before the start are disabled', await page.locator('button[class*="calDay"]', { hasText: /^5$/ }).first().isDisabled())
+
+  // Pick the 25th.
+  await page.locator('button[class*="calDay"]', { hasText: /^25$/ }).first().click()
+  await page.waitForTimeout(100)
+  const [, end1] = await values()
+  ok('picking a day updates the end value', end1 === '2026-07-25', end1)
+  ok('calendar closes after picking', (await page.locator('[class*="calPopup"]').count()) === 0)
+
+  // Open the start (left) calendar; its max is now the new end.
+  await page.locator('button[class*="dateField"]').nth(0).click()
+  ok('days after the end are disabled', await page.locator('button[class*="calDay"]', { hasText: /^28$/ }).first().isDisabled())
+  await page.locator('button[class*="calDay"]', { hasText: /^10$/ }).first().click()
+  await page.waitForTimeout(100)
+  const [start1] = await values()
+  ok('picking a day updates the start value', start1 === '2026-07-10', start1)
+
+  // Month navigation works.
+  await page.locator('button[class*="dateField"]').nth(1).click()
+  const title0 = await page.locator('[class*="calTitle"]').first().textContent()
+  await page.locator('button[aria-label="Previous month"]').first().click()
+  const title1 = await page.locator('[class*="calTitle"]').first().textContent()
+  ok('previous-month navigation changes the header', title0 !== title1, `${title0} -> ${title1}`)
+  await page.keyboard.press('Escape')
+  ok('Escape closes the calendar', (await page.locator('[class*="calPopup"]').count()) === 0)
+}
+
 /** Date tabs: each range repopulates the table, summary and chart. */
 const dateTabFlow = async (page) => {
   // The default view (Last 7 days) is the fixed default: 6 columns, and the
@@ -628,6 +668,7 @@ const RUNS = [
   { route: '/', name: 'flow-add-creator', width: 1440, height: 900, interaction: addCreatorFlow },
   { route: '/', name: 'flow-delete-creator', width: 1440, height: 900, interaction: deleteFlow },
   { route: '/', name: 'flow-date-field', width: 1440, height: 900, interaction: dateFieldFlow },
+  { route: '/', name: 'flow-date-picker', width: 1440, height: 900, interaction: datePickerFlow },
   { route: '/', name: 'flow-date-tabs', width: 1440, height: 900, interaction: dateTabFlow },
 ]
 
