@@ -243,7 +243,9 @@ export const CHART_VIEW = { width: 1200, height: 316.245 }
 
 /** Chart geometry. Bar width adapts to the column count (wide for a few
     columns, thin for many); heights normalise so the tallest bar fills the
-    plot and every bar shares the baseline. */
+    plot and every bar shares the baseline. The Markup dots ride the top of
+    each Subscribers bar, so the line traces the subscriber trend rather than
+    carrying a scale of its own. */
 export const layoutChart = (buckets: Bucket[]) => {
   const n = Math.max(1, buckets.length)
   const slot = CHART_VIEW.width / n
@@ -251,7 +253,6 @@ export const layoutChart = (buckets: Bucket[]) => {
   const barW = Math.max(4, Math.min(MAX_BAR_W, (slot * 0.68 - gap) / 2))
   const groupW = barW * 2 + gap
   const maxCount = Math.max(1, ...buckets.flatMap((b) => [b.signUps, b.subscribers]))
-  const maxMarkup = Math.max(1, ...buckets.map((b) => b.markup))
   const labelStep = Math.ceil(n / 12)
 
   const bars: { x: number; y: number; w: number; h: number; fill: string }[] = []
@@ -266,7 +267,7 @@ export const layoutChart = (buckets: Bucket[]) => {
     bars.push({ x: startX + barW + gap, y: BASELINE - sbH, w: barW, h: sbH, fill: 'var(--color-border-pd02)' })
 
     const cx = i * slot + slot / 2
-    dots.push({ x: cx, y: BASELINE - (0.14 + 0.72 * (b.markup / maxMarkup)) * MAX_BAR_H })
+    dots.push({ x: cx, y: BASELINE - sbH })
     if (i % labelStep === 0 || i === n - 1) labels.push({ x: cx, y: LABEL_Y + 13, text: b.label })
   })
 
