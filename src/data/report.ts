@@ -164,8 +164,13 @@ const TODAY = new Date('2026-07-21T00:00:00')
 const dayDef = (d: Date): BucketDef => ({
   label: `${pad(d.getMonth() + 1)}/${pad(d.getDate())}`,
   dateStr: `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`,
-  extra: randInt(3, 8),
+  extra: 1, // real value assigned in generateDataset once subscribers are known
 })
+
+/** Lead surplus for a day, kept close to its subscriber count so the
+    subscriber bar stays a healthy — and varied — fraction of the sign-up bar
+    (roughly 40–85% conversion, with some low days and some high days). */
+const surplusFor = (subscribers: number) => (subscribers > 0 ? randInt(1, subscribers + 1) : 1)
 
 const weekDefs = (year: number, month: number): BucketDef[] => {
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -200,18 +205,24 @@ export type Dataset = { creators: Creator[]; defs: BucketDef[]; cards: Card[] }
 /** Build a coherent dataset for a date range: paying creators spread across
     the days, every day seeded with at least one so no column is empty. */
 export const generateDataset = (range: Range): Dataset => {
-  const defs = rangeDefs(range)
+  const bare = rangeDefs(range)
   const [lo, hi] = CREATOR_COUNT[range]
-  const count = Math.max(defs.length, randInt(lo, hi))
+  const count = Math.max(bare.length, randInt(lo, hi))
 
   const creators: Creator[] = []
   let id = 1
   // Seed one per day, then scatter the rest — keeps every column populated.
-  defs.forEach((def) => creators.push(makeCreatorRow(id++, `Creator${id - 1}`, def, randomAmount())))
+  bare.forEach((def) => creators.push(makeCreatorRow(id++, `Creator${id - 1}`, def, randomAmount())))
   for (let i = creators.length; i < count; i++) {
-    const def = defs[randInt(0, defs.length - 1)]
+    const def = bare[randInt(0, bare.length - 1)]
     creators.push(makeCreatorRow(id++, `Creator${id - 1}`, def, randomAmount()))
   }
+
+  // Set each day's lead surplus from its actual subscriber count.
+  const defs = bare.map((def) => ({
+    ...def,
+    extra: surplusFor(creators.filter((c) => c.signUpDate === def.dateStr).length),
+  }))
 
   creators.sort((a, b) => (a.signUpDate < b.signUpDate ? 1 : -1))
   return { creators, defs, cards: cardsFor(creators, defs) }
@@ -219,28 +230,36 @@ export const generateDataset = (range: Range): Dataset => {
 
 /* --------------------------------------------------------------- initial -- */
 
-// Fixed default (Last 7 days). Small lead surplus per day keeps sign-ups above
-// subscribers; all six days carry a subscriber so all six columns render.
+// Fixed default (Last 7 days). Subscribers per day: [3,2,2,2,3,2]; the lead
+// surplus below gives a mix of low-conversion days (07/23 ~33%, 07/25 ~29%)
+// and high ones (07/22 & 07/26 ~75%), so the subscriber bars vary rather than
+// staying uniformly short. All six days carry subscribers, so all render.
 export const INITIAL_DEFS: BucketDef[] = [
-  { label: '07/22', dateStr: '2026.07.22', extra: 5 },
-  { label: '07/23', dateStr: '2026.07.23', extra: 7 },
-  { label: '07/24', dateStr: '2026.07.24', extra: 6 },
-  { label: '07/25', dateStr: '2026.07.25', extra: 8 },
-  { label: '07/26', dateStr: '2026.07.26', extra: 6 },
-  { label: '07/27', dateStr: '2026.07.27', extra: 4 },
+  { label: '07/22', dateStr: '2026.07.22', extra: 1 },
+  { label: '07/23', dateStr: '2026.07.23', extra: 4 },
+  { label: '07/24', dateStr: '2026.07.24', extra: 1 },
+  { label: '07/25', dateStr: '2026.07.25', extra: 5 },
+  { label: '07/26', dateStr: '2026.07.26', extra: 1 },
+  { label: '07/27', dateStr: '2026.07.27', extra: 2 },
 ]
 
 const initialRow = (id: number, dateStr: string, amountNum: number): Creator =>
   makeCreatorRow(id, `Creator${id}`, { label: '', dateStr, extra: 0 }, amountNum)
 
 export const INITIAL_CREATORS: Creator[] = [
-  initialRow(8, '2026.07.27', 17.05),
-  initialRow(7, '2026.07.27', 34.1),
-  initialRow(6, '2026.07.26', 17.05),
-  initialRow(5, '2026.07.25', 17.05),
-  initialRow(4, '2026.07.25', 34.1),
-  initialRow(3, '2026.07.24', 17.05),
-  initialRow(2, '2026.07.23', 17.05),
+  initialRow(14, '2026.07.27', 34.1),
+  initialRow(13, '2026.07.27', 17.05),
+  initialRow(12, '2026.07.26', 17.05),
+  initialRow(11, '2026.07.26', 34.1),
+  initialRow(10, '2026.07.26', 17.05),
+  initialRow(9, '2026.07.25', 17.05),
+  initialRow(8, '2026.07.25', 34.1),
+  initialRow(7, '2026.07.24', 17.05),
+  initialRow(6, '2026.07.24', 17.05),
+  initialRow(5, '2026.07.23', 34.1),
+  initialRow(4, '2026.07.23', 17.05),
+  initialRow(3, '2026.07.22', 17.05),
+  initialRow(2, '2026.07.22', 34.1),
   initialRow(1, '2026.07.22', 17.05),
 ]
 

@@ -302,6 +302,14 @@ const reportSpec = (m) => {
   ok('sign-up bar never shorter than subscriber bar', pairsOk)
   ok('no zero-height bars', m.bars.every((b) => b.h > 0), `min ${Math.min(...m.bars.map((b) => b.h)).toFixed(1)}`)
 
+  // Subscriber bars should read as a healthy, varied fraction — not uniformly
+  // tiny. Average ratio well above the old ~18%, and a real spread of days.
+  const ratios = signUps.map((su, i) => subs[i].h / su.h)
+  const avg = ratios.reduce((a, r) => a + r, 0) / ratios.length
+  const spread = Math.max(...ratios) - Math.min(...ratios)
+  ok('subscriber ratio is healthy on average', avg >= 0.4, `avg ${(avg * 100).toFixed(0)}%`)
+  ok('subscriber ratio varies across days', spread >= 0.15, `spread ${(spread * 100).toFixed(0)}%`)
+
   console.log('-- actions')
   near('export button w', m.exportButton.w, 126)
   near('export button h', m.exportButton.h, 40)
