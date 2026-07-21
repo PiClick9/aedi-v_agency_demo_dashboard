@@ -277,7 +277,7 @@ const reportSpec = (m) => {
   console.log('-- graph tabs')
   near('graph tabs y (from summary)', m.graphTabs.y - (m.summary.y + m.summary.h), 16)
   near('graph tabs h', m.graphTabs.h, 48)
-  ok('4 graph tabs', m.graphTabList.length === 4, `${m.graphTabList.length}`)
+  ok('2 graph tabs (Daily, Weekly)', m.graphTabList.length === 2, `${m.graphTabList.length}`)
   eq('active graph tab', m.activeGraphTab.text, 'Daily')
   eq('active graph tab weight', m.activeGraphTab.weight, '700')
   near('active graph tab underline', parseFloat(m.activeGraphTab.border), 3)
@@ -291,7 +291,10 @@ const reportSpec = (m) => {
   const subs = m.bars.filter((b) => b.fill === 'rgb(41, 127, 255)')
   ok('6 sign-up bars', signUps.length === 6, `${signUps.length}`)
   ok('6 subscriber bars', subs.length === 6, `${subs.length}`)
-  ok('all bars 50 wide', m.bars.every((b) => b.w === 50))
+  // Bars are one adaptive width; six columns are wide enough to hit the 50 cap.
+  const w0 = m.bars[0].w
+  ok('all bars share one width', m.bars.every((b) => Math.abs(b.w - w0) < 0.01), `${w0.toFixed(1)}`)
+  ok('bar width within [4, 50]', w0 >= 4 && w0 <= 50, `${w0.toFixed(1)}`)
   ok('all bars share the 281 baseline', m.bars.every((b) => Math.abs(b.y + b.h - 281) < 0.01))
   ok('6 markup dots', m.dots === 6, `${m.dots}`)
   ok('3 legend entries', m.legendItems === 3, `${m.legendItems}`)
@@ -415,7 +418,8 @@ const readState = (page) =>
       rowCount: document.querySelectorAll('tbody tr').length,
       dots: document.querySelectorAll('svg circle').length,
       signUpBarSum: +signUpBars.reduce((a, r) => a + h(r), 0).toFixed(1),
-      barsWidth50: rects.every((r) => Number(r.getAttribute('width')) === 50),
+      barW: rects.length ? Number(rects[0].getAttribute('width')) : 0,
+      barsEqualWidth: rects.every((r) => Math.abs(Number(r.getAttribute('width')) - Number(rects[0].getAttribute('width'))) < 0.01),
       barsOnBaseline: rects.every((r) => Math.abs(Number(r.getAttribute('y')) + h(r) - 281) < 0.5),
       signupGEsub: signUpBars.every((r, i) => h(r) >= h(subBars[i]) - 0.01),
       allBarsPositive: rects.every((r) => h(r) > 0),
@@ -473,7 +477,7 @@ const addCreatorFlow = async (page) => {
 
   ok('Subscribers incremented', Number(after.subscribers) === Number(before.subscribers) + 1, `${before.subscribers} -> ${after.subscribers}`)
   ok('chart reacted (bar heights changed)', after.signUpBarSum !== before.signUpBarSum, `${before.signUpBarSum} -> ${after.signUpBarSum}`)
-  ok('bars still 50 wide', after.barsWidth50)
+  ok('bars share one width', after.barsEqualWidth)
   ok('bars still on baseline', after.barsOnBaseline)
   ok('sign-up still >= subscriber after add', after.signupGEsub)
   ok('no zero bars after add', after.allBarsPositive)
@@ -525,36 +529,47 @@ const dateTabFlow = async (page) => {
   const afterReclick = await readState(page)
   ok('re-clicking the active tab changes nothing', sameState(afterReclick, before), `${before.firstCreator} vs ${afterReclick.firstCreator}`)
 
-  console.log('-- date tab: Today')
+  console.log('-- Daily + Today: a single day column')
   await page.click('text=Today')
   await page.waitForTimeout(700) // let the 0.6s chart transition settle
   const today = await readState(page)
-  ok('Today reconfigures the chart to 1 column', today.dots === 1, `${today.dots} dots`)
-  ok('Today bars 50 wide', today.barsWidth50)
+  ok('Today is one daily column', today.dots === 1, `${today.dots} dots`)
+  ok('Today bars share one width', today.barsEqualWidth)
+  ok('Today bars are wide (few columns)', today.barW >= 20, `${today.barW.toFixed(1)}px`)
   ok('Today bars on baseline', today.barsOnBaseline)
   ok('Today sign-up >= subscriber', today.signupGEsub)
-  ok('Today no zero bars', today.allBarsPositive)
   ok('Today no zero cells', !today.tableHasZero)
   ok('Today data differs from initial', today.firstCreator !== before.firstCreator || today.signUps !== before.signUps)
   ok('Today no horizontal overflow', today.scrollW <= today.clientW)
 
-  console.log('-- date tab: This Month')
+  console.log('-- Daily + This Month: every real day, thin bars')
   await page.click('text=This Month')
   await page.waitForTimeout(700) // let the 0.6s chart transition settle
-  const month = await readState(page)
-  ok('This Month uses weekly columns', month.dots >= 4, `${month.dots} dots`)
-  ok('This Month bars 50 wide', month.barsWidth50)
-  ok('This Month bars on baseline', month.barsOnBaseline)
-  ok('This Month sign-up >= subscriber', month.signupGEsub)
-  ok('This Month no zero bars', month.allBarsPositive)
-  ok('This Month no zero cells', !month.tableHasZero)
-  ok('This Month no horizontal overflow', month.scrollW <= month.clientW)
+  const monthDaily = await readState(page)
+  ok('This Month daily shows many day columns', monthDaily.dots >= 10, `${monthDaily.dots} dots`)
+  ok('This Month daily bars share one width', monthDaily.barsEqualWidth)
+  ok('This Month daily bars are thin (many columns)', monthDaily.barW < today.barW, `${monthDaily.barW.toFixed(1)}px vs ${today.barW.toFixed(1)}px`)
+  ok('This Month daily bars on baseline', monthDaily.barsOnBaseline)
+  ok('This Month daily sign-up >= subscriber', monthDaily.signupGEsub)
+  ok('This Month daily no horizontal overflow', monthDaily.scrollW <= monthDaily.clientW)
 
-  console.log('-- date tab: Last Month')
+  console.log('-- Weekly: same window, fewer week columns, wider bars')
+  await page.click('text=Weekly')
+  await page.waitForTimeout(700)
+  const monthWeekly = await readState(page)
+  ok('Weekly collapses to fewer columns than daily', monthWeekly.dots < monthDaily.dots, `${monthWeekly.dots} vs ${monthDaily.dots}`)
+  ok('Weekly has at least one column', monthWeekly.dots >= 1)
+  ok('Weekly bars are wider than daily', monthWeekly.barW > monthDaily.barW, `${monthWeekly.barW.toFixed(1)}px vs ${monthDaily.barW.toFixed(1)}px`)
+  ok('Weekly sign-up >= subscriber', monthWeekly.signupGEsub)
+  ok('Weekly no horizontal overflow', monthWeekly.scrollW <= monthWeekly.clientW)
+
+  console.log('-- Last Month daily')
+  await page.click('text=Daily')
+  await page.waitForTimeout(300)
   await page.click('text=Last Month')
-  await page.waitForTimeout(700) // let the 0.6s chart transition settle
+  await page.waitForTimeout(700)
   const last = await readState(page)
-  ok('Last Month uses weekly columns', last.dots >= 4, `${last.dots} dots`)
+  ok('Last Month daily shows many day columns', last.dots >= 10, `${last.dots} dots`)
   ok('Last Month bars on baseline', last.barsOnBaseline)
 
   console.log('-- return to Today (cached, must be unchanged)')

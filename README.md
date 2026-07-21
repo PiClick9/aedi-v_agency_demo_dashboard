@@ -18,6 +18,11 @@ npm run dev
 | --- | --- | --- |
 | `#/` | Creator Sign-up Report (영문) | `3910:19916` |
 
+그래프 탭은 **Daily / Weekly** 두 가지입니다. 기간(Today/Last 7 days/This Month/Last
+Month)이 창을 정하고, 탭이 세분화를 정합니다 — Daily는 실제 일자, Weekly는 주 단위
+컬럼이 쭉 나옵니다. 막대 너비는 컬럼 수에 맞춰 동적으로 조절됩니다(컬럼이 적으면 넓게,
+많으면 얇게).
+
 UI 텍스트는 영문으로만 작성합니다.
 
 ### 상호작용

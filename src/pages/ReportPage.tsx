@@ -6,13 +6,14 @@ import {
   DATE_TABS,
   INITIAL_CARDS,
   INITIAL_CREATORS,
-  INITIAL_DEFS,
+  INITIAL_EXTRAS,
   cardsFor,
   deriveChart,
   deriveValues,
   generateDataset,
   makeCreator,
   type Dataset,
+  type GraphTab,
   type Range,
 } from '../data/report'
 import chevron from '../assets/icon-chevron.svg'
@@ -32,13 +33,13 @@ const PAGE_SIZE = 5
 // generated once, on first visit, then cached — so re-clicking an active tab
 // does nothing and returning to a tab shows the same data.
 const INITIAL_DATASETS: Partial<Record<Range, Dataset>> = {
-  'Last 7 days': { creators: INITIAL_CREATORS, defs: INITIAL_DEFS, cards: INITIAL_CARDS },
+  'Last 7 days': { creators: INITIAL_CREATORS, extras: INITIAL_EXTRAS, cards: INITIAL_CARDS },
 }
 
 /** "보고서 영문" — Creator Sign-up Report (Figma node 3910:19916). */
 export default function ReportPage() {
   const [range, setRange] = useState<Range>('Last 7 days')
-  const [graphTab, setGraphTab] = useState<string>('Daily')
+  const [graphTab, setGraphTab] = useState<GraphTab>('Daily')
   const [datasets, setDatasets] = useState<Partial<Record<Range, Dataset>>>(INITIAL_DATASETS)
   const [page, setPage] = useState(1)
   // Id of the just-added creator, so its table row can flag itself as new.
@@ -51,8 +52,8 @@ export default function ReportPage() {
     if (id !== null) newTimer.current = window.setTimeout(() => setNewId(null), 2400)
   }
 
-  const { creators, defs, cards } = datasets[range]!
-  const buckets = useMemo(() => deriveChart(creators, defs), [creators, defs])
+  const { creators, extras, cards } = datasets[range]!
+  const buckets = useMemo(() => deriveChart(creators, extras, graphTab), [creators, extras, graphTab])
 
   const pageCount = Math.max(1, Math.ceil(creators.length / PAGE_SIZE))
   const current = Math.min(page, pageCount)
@@ -74,18 +75,18 @@ export default function ReportPage() {
     setDatasets((prev) => ({ ...prev, [range]: dataset }))
 
   const addCreator = () => {
-    const prev = deriveValues(creators, defs)
-    const creator = makeCreator(creators, defs)
+    const prev = deriveValues(creators, extras)
+    const creator = makeCreator(creators)
     const nextCreators = [creator, ...creators]
-    updateCurrent({ creators: nextCreators, defs, cards: cardsFor(nextCreators, defs, prev) })
+    updateCurrent({ creators: nextCreators, extras, cards: cardsFor(nextCreators, extras, prev) })
     setPage(1)
     flagNew(creator.id)
   }
 
   const deleteCreator = (id: number) => {
-    const prev = deriveValues(creators, defs)
+    const prev = deriveValues(creators, extras)
     const nextCreators = creators.filter((c) => c.id !== id)
-    updateCurrent({ creators: nextCreators, defs, cards: cardsFor(nextCreators, defs, prev) })
+    updateCurrent({ creators: nextCreators, extras, cards: cardsFor(nextCreators, extras, prev) })
     flagNew(null)
   }
 
