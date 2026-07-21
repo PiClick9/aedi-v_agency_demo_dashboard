@@ -65,7 +65,7 @@
 }
 
 .select {
-  width: 210px;
+  width: 246px;
   height: var(--height-48);
   display: flex;
   align-items: center;
@@ -194,7 +194,7 @@
 .dateTabs {
   flex-shrink: 0;
   display: flex;
-  width: 492px;
+  width: 462px;
   border: 1px solid var(--color-border-base);
   border-radius: var(--radius-m);
 }
@@ -463,9 +463,20 @@
   overflow-wrap: anywhere;
 }
 
+/* The design zebra-stripes the body: odd rows take the subtler surface, even
+   rows are left unfilled on the white card. The resting colour lives in
+   --row-bg so the new-row flash can animate back to whichever one applies. */
+.table tbody tr {
+  --row-bg: var(--color-surface-base);
+  background: var(--row-bg);
+}
+
+.table tbody tr:nth-child(odd) {
+  --row-bg: var(--color-surface-secondary-subtler);
+}
+
 .table tbody td {
   height: 52px;
-  background: var(--color-surface-secondary-subtler);
   font-weight: var(--font-weight-regular);
   white-space: nowrap;
 }
@@ -488,8 +499,15 @@
   padding: 0 var(--spacing-4);
 }
 
+/* "Subscription Plan" gets a tighter gutter than the 24px the rest of the
+   table uses, so the wrapped heading and the plan names sit wider in the cell. */
+.table th.colPlan,
+.table td.colPlan {
+  padding: 0 var(--spacing-4);
+}
+
 .alignRight {
-  text-align: right;
+  text-align: right !important;
 }
 
 /* Header wrapping is per-column in the design. These four are set to nowrap,
@@ -517,11 +535,11 @@
     background-color: rgba(41, 127, 255, 0.22);
   }
   to {
-    background-color: var(--color-surface-secondary-subtler);
+    background-color: var(--row-bg);
   }
 }
 
-.rowNew td {
+.rowNew {
   animation: rowFlash 2.2s ease-out;
 }
 
@@ -531,8 +549,10 @@
   font-size: var(--font-size-body-small);
   font-weight: var(--font-weight-medium);
   line-height: 1.5;
-  color: var(--color-text-inverse);
-  background: var(--color-border-pd02);
+  /* Amber reads as "just added" without competing with the primary blue.
+     Dark text, since white on this yellow is unreadable. */
+  color: var(--color-text-base);
+  background: var(--color-border-pd04);
   border-radius: var(--radius-circle);
   vertical-align: middle;
 }

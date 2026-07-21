@@ -262,7 +262,7 @@ export default function ReportPage() {
                   <th className={`${styles.colCreator} ${styles.headNowrap}`}>Creator Name</th>
                   <th className={`${styles.colFlex} ${styles.headNowrap}`}>Promo Credit</th>
                   <th className={styles.colStart}>Subscription Start Date</th>
-                  <th className={styles.colFlex}>Subscription Plan</th>
+                  <th className={`${styles.colFlex} ${styles.colPlan}`}>Subscription Plan</th>
                   <th className={`${styles.colFlex} ${styles.headLastPayment}`}>Last Payment Date</th>
                   <th className={`${styles.colFlex} ${styles.alignRight}`}>Payment Amount</th>
                   <th className={`${styles.colFlex} ${styles.headMarkup} ${styles.headNowrap}`}>Markup</th>
@@ -279,10 +279,10 @@ export default function ReportPage() {
                     </td>
                     <td className={styles.colFlex}>{row.promoCredit}</td>
                     <td className={styles.colStart}>{row.startDate}</td>
-                    <td className={styles.colFlex}>{row.plan}</td>
+                    <td className={`${styles.colFlex} ${styles.colPlan}`}>{row.plan}</td>
                     <td className={styles.colFlex}>{row.lastPayment}</td>
-                    <td className={styles.colFlex}>{row.amount}</td>
-                    <td className={styles.colFlex}>{row.markup}</td>
+                    <td className={`${styles.colFlex} ${styles.alignRight}`}>{row.amount}</td>
+                    <td className={`${styles.colFlex} ${styles.alignRight}`}>{row.markup}</td>
                     <td className={styles.colAction}>
                       <button
                         type="button"
