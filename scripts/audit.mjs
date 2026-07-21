@@ -513,6 +513,35 @@ const deleteFlow = async (page) => {
 const sameState = (a, b) =>
   a.signUps === b.signUps && a.firstCreator === b.firstCreator && a.dots === b.dots && a.signUpBarSum === b.signUpBarSum
 
+/** The date-field select offers the three options and updates on choice. */
+const dateFieldFlow = async (page) => {
+  console.log('-- date-field select')
+  const value = () => page.locator('[class*="selectValue"]').first().textContent()
+  ok('defaults to Sign-up Date', (await value()) === 'Sign-up Date', await value())
+  ok('menu closed initially', (await page.locator('[class*="pickerMenu"]').count()) === 0)
+
+  await page.click('button[class*="select"]')
+  const opts = await page.locator('[class*="pickerOption"]').allTextContents()
+  ok('menu lists all three options', opts.length === 3, opts.join(' | '))
+  ok('options are the three date fields',
+    JSON.stringify(opts) === JSON.stringify(['Sign-up Date', 'Subscription Start Date', 'Last Payment Date']),
+    opts.join(' | '))
+  ok('select box stays 210 wide', Math.abs((await page.locator('button[class*="select"]').first().boundingBox()).width - 210) < 0.75)
+
+  await page.click('text=Subscription Start Date')
+  await page.waitForTimeout(100)
+  ok('choosing updates the value', (await value()) === 'Subscription Start Date', await value())
+  ok('menu closes after choosing', (await page.locator('[class*="pickerMenu"]').count()) === 0)
+
+  await page.click('button[class*="select"]')
+  await page.click('text=Last Payment Date')
+  await page.waitForTimeout(100)
+  ok('can pick Last Payment Date too', (await value()) === 'Last Payment Date', await value())
+
+  // Long value ellipsizes without pushing the box wider.
+  ok('box still 210 with long value', Math.abs((await page.locator('button[class*="select"]').first().boundingBox()).width - 210) < 0.75)
+}
+
 /** Date tabs: each range repopulates the table, summary and chart. */
 const dateTabFlow = async (page) => {
   // The default view (Last 7 days) is the fixed default: 6 columns, and the
@@ -598,6 +627,7 @@ const RUNS = [
   { route: '/', name: 'report-320x568', width: 320, height: 568, spec: responsiveSpec },
   { route: '/', name: 'flow-add-creator', width: 1440, height: 900, interaction: addCreatorFlow },
   { route: '/', name: 'flow-delete-creator', width: 1440, height: 900, interaction: deleteFlow },
+  { route: '/', name: 'flow-date-field', width: 1440, height: 900, interaction: dateFieldFlow },
   { route: '/', name: 'flow-date-tabs', width: 1440, height: 900, interaction: dateTabFlow },
 ]
 

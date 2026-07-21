@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import HeaderPc from '../components/HeaderPc'
 import SignupChart from '../components/SignupChart'
 import {
@@ -29,6 +29,8 @@ import styles from './ReportPage.module.css'
 
 const PAGE_SIZE = 5
 
+const DATE_FIELDS = ['Sign-up Date', 'Subscription Start Date', 'Last Payment Date'] as const
+
 // "Last 7 days" is the default and is pinned to fixed data. Other ranges are
 // generated once, on first visit, then cached — so re-clicking an active tab
 // does nothing and returning to a tab shows the same data.
@@ -45,6 +47,25 @@ export default function ReportPage() {
   // Id of the just-added creator, so its table row can flag itself as new.
   const [newId, setNewId] = useState<number | null>(null)
   const newTimer = useRef<number | undefined>(undefined)
+
+  // Date-field picker (the select beside "Date Range").
+  const [dateField, setDateField] = useState<string>(DATE_FIELDS[0])
+  const [fieldOpen, setFieldOpen] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!fieldOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setFieldOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setFieldOpen(false)
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [fieldOpen])
 
   const flagNew = (id: number | null) => {
     window.clearTimeout(newTimer.current)
@@ -103,10 +124,40 @@ export default function ReportPage() {
           <div className={styles.dateRow}>
             <span className={styles.dateLabel}>Date Range</span>
 
-            <div className={styles.select}>
-              <span className={styles.selectValue}>Sign-up Date</span>
-              <span className={styles.selectDivider} />
-              <img className={styles.selectArrow} src={chevron} alt="" />
+            <div className={styles.fieldPicker} ref={pickerRef}>
+              <button
+                type="button"
+                className={styles.select}
+                aria-haspopup="listbox"
+                aria-expanded={fieldOpen}
+                onClick={() => setFieldOpen((o) => !o)}
+              >
+                <span className={styles.selectValue}>{dateField}</span>
+                <span className={styles.selectDivider} />
+                <img
+                  className={`${styles.selectArrow} ${fieldOpen ? styles.selectArrowOpen : ''}`}
+                  src={chevron}
+                  alt=""
+                />
+              </button>
+              {fieldOpen && (
+                <ul className={styles.pickerMenu} role="listbox">
+                  {DATE_FIELDS.map((opt) => (
+                    <li key={opt} role="option" aria-selected={opt === dateField}>
+                      <button
+                        type="button"
+                        className={`${styles.pickerOption} ${opt === dateField ? styles.pickerOptionActive : ''}`}
+                        onClick={() => {
+                          setDateField(opt)
+                          setFieldOpen(false)
+                        }}
+                      >
+                        {opt}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className={styles.datepicker}>

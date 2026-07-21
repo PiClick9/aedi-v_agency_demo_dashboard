@@ -59,17 +59,24 @@
   white-space: nowrap;
 }
 
-.select {
+.fieldPicker {
+  position: relative;
   flex-shrink: 0;
+}
+
+.select {
   width: 210px;
   height: var(--height-48);
   display: flex;
   align-items: center;
   gap: var(--spacing-4);
   padding: 0 var(--spacing-4);
+  font-family: inherit;
+  text-align: left;
   background: var(--color-surface-base);
   border: 1px solid var(--color-border-base);
   border-radius: var(--radius-m);
+  cursor: pointer;
 }
 
 .selectValue {
@@ -78,6 +85,10 @@
   font-size: var(--font-size-body-large);
   line-height: var(--line-height-body);
   color: var(--color-text-base);
+  /* Long options ("Subscription Start Date") ellipsize inside the fixed box. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .selectDivider {
@@ -89,6 +100,51 @@
 .selectArrow {
   width: 11.199px;
   height: 5.599px;
+  transition: transform 0.2s ease;
+}
+
+.selectArrowOpen {
+  transform: rotate(180deg);
+}
+
+.pickerMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 100%;
+  margin: 0;
+  padding: var(--spacing-1);
+  list-style: none;
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-base);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-3);
+}
+
+.pickerOption {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  font-family: inherit;
+  font-size: var(--font-size-body-large);
+  line-height: var(--line-height-body);
+  color: var(--color-text-base);
+  text-align: left;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.pickerOption:hover {
+  background: var(--color-surface-selected);
+}
+
+.pickerOptionActive {
+  font-weight: var(--font-weight-medium);
+  background: var(--color-surface-selected);
 }
 
 .datepicker {
