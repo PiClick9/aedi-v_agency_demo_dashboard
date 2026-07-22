@@ -16,7 +16,7 @@ export type Creator = {
   creator: string
   promoCredit: string
   startDate: string
-  plan: string
+  plan: PlanName
   lastPayment: string
   amount: string
   markup: string
@@ -86,23 +86,44 @@ const nextCreatorName = (creators: Creator[]) => {
 
 const surplusFor = (subscribers: number) => (subscribers > 0 ? randInt(1, subscribers + 1) : 1)
 
+/* ----------------------------------------------------------------- plans -- */
+
+const VAT_RATE = 0.1
+
+/** The subscription catalogue. `base` is the list price; Payment Amount shows
+    it VAT-inclusive, so Standard bills at 15.5 x 1.1 = $17.05. Promo credit is
+    fixed per plan, so a row's plan decides its credit and its amount together —
+    there are only three shapes a creator row can take. */
+const PLANS = [
+  { name: 'Starter', promoCredit: '30:00', base: 9 },
+  { name: 'Standard', promoCredit: '1:00:00', base: 15.5 },
+  { name: 'Pro', promoCredit: '2:00:00', base: 28 },
+] as const
+
+type Plan = (typeof PLANS)[number]
+export type PlanName = Plan['name']
+
+const randomPlan = (): Plan => PLANS[randInt(0, PLANS.length - 1)]
+
 /* -------------------------------------------------------------- creators -- */
 
-const makeCreatorRow = (id: number, name: string, dateStr: string, amountNum: number): Creator => ({
-  id,
-  signUpDate: dateStr,
-  creator: name,
-  promoCredit: '60:00',
-  startDate: dateStr,
-  plan: 'Standard',
-  lastPayment: dateStr,
-  amount: money(amountNum),
-  markup: money(round2(amountNum * 0.2)),
-  amountNum,
-  markupNum: round2(amountNum * 0.2),
-})
-
-const randomAmount = () => round2(17.05 * randInt(1, 3))
+const makeCreatorRow = (id: number, name: string, dateStr: string, plan: Plan): Creator => {
+  const amountNum = round2(plan.base * (1 + VAT_RATE))
+  const markupNum = round2(amountNum * 0.2)
+  return {
+    id,
+    signUpDate: dateStr,
+    creator: name,
+    promoCredit: plan.promoCredit,
+    startDate: dateStr,
+    plan: plan.name,
+    lastPayment: dateStr,
+    amount: money(amountNum),
+    markup: money(markupNum),
+    amountNum,
+    markupNum,
+  }
+}
 
 /* --------------------------------------------------------------- derive -- */
 
@@ -214,7 +235,7 @@ export const generatePool = (): Pool => {
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const day = dot(d)
     const n = randInt(1, 3)
-    for (let k = 0; k < n; k++) creators.push(makeCreatorRow(id++, `Creator${id - 1}`, day, randomAmount()))
+    for (let k = 0; k < n; k++) creators.push(makeCreatorRow(id++, `Creator${id - 1}`, day, randomPlan()))
     extras[day] = surplusFor(n)
   }
   creators.sort((a, b) => (a.signUpDate < b.signUpDate ? 1 : -1))
@@ -226,7 +247,7 @@ export const generatePool = (): Pool => {
 export const makeCreatorAt = (pool: Pool, dayDash: string): { creator: Creator; extras: Extras } => {
   const day = dashToDot(dayDash)
   const id = pool.creators.reduce((m, c) => Math.max(m, c.id), 0) + 1
-  const creator = makeCreatorRow(id, nextCreatorName(pool.creators), day, randomAmount())
+  const creator = makeCreatorRow(id, nextCreatorName(pool.creators), day, randomPlan())
   const extras = day in pool.extras ? pool.extras : { ...pool.extras, [day]: 1 }
   return { creator, extras }
 }
