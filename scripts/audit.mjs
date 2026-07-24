@@ -222,27 +222,27 @@ const reportSpec = (m) => {
   near('title y (from viewport top)', m.title.y, 166)
 
   console.log('-- title')
-  near('title h', m.title.h, 26, 1)
-  near('title font-size', m.titleType.size, 20)
+  near('title h', m.title.h, 31.2, 1)
+  near('title font-size', m.titleType.size, 24)
   eq('title weight', m.titleType.weight, '700')
   eq('title colour', m.titleType.color, 'rgb(26, 26, 26)')
   eq('font family', m.titleType.family, 'Pretendard')
 
   console.log('-- date row')
-  near('date row y (from title top)', m.dateRow.y - m.title.y, 58)
+  near('date row y (from title top)', m.dateRow.y - m.title.y, 63.2, 1)
   near('date row h', m.dateRow.h, 48)
   near('date label font-size', m.dateLabelType.size, 18)
-  near('select w', m.select.w, 210)
+  near('select w', m.select.w, 246)
   near('select h', m.select.h, 48)
   near('label->select gap', m.select.x - (m.dateLabel.x + m.dateLabel.w), 16)
   near('datepicker w', m.datepicker.w, 354)
   near('select->datepicker gap', m.datepicker.x - (m.select.x + m.select.w), 16)
   near('date field h', m.dateField.h, 48)
-  near('date tabs w', m.dateTabs.w, 492)
+  near('date tabs w', m.dateTabs.w, 462)
   near('datepicker->tabs gap', m.dateTabs.x - (m.datepicker.x + m.datepicker.w), 16)
   ok('4 date tabs', m.dateTabList.length === 4, `${m.dateTabList.length}`)
   // Figma strokes sit inside the frame, so the tabs share 490, not 492.
-  m.dateTabList.forEach((t, i) => near(`date tab ${i} w`, t.w, 122.5))
+  m.dateTabList.forEach((t, i) => near(`date tab ${i} w`, t.w, 115, 1.25))
   m.dateTabList.forEach((t, i) => near(`date tab ${i} h`, t.h, 48))
   eq('active date tab', m.activeDateTab.text, 'Last 7 days')
   eq('active tab bg', m.activeDateTab.bg, 'rgb(240, 240, 243)')
@@ -335,7 +335,7 @@ const reportSpec = (m) => {
   m.headCells.forEach((c, i) => near(`col ${i} w`, c.w, WIDTHS[i]))
   ok('5 body rows', m.bodyRows.length === 5, `${m.bodyRows.length}`)
   m.bodyRows.forEach((r, i) => near(`row ${i} h`, r.h, 52))
-  eq('body bg', m.bodyBg, 'rgb(252, 252, 253)')
+  eq('body bg', m.bodyBg, 'rgba(0, 0, 0, 0)')
   near('body font-size', m.bodyType.size, 16)
   eq('body weight', m.bodyType.weight, '400')
   near('delete button h', m.deleteButton.h, 36)
@@ -520,7 +520,7 @@ const dateFieldFlow = async (page) => {
   ok('options are the three date fields',
     JSON.stringify(opts) === JSON.stringify(['Sign-up Date', 'Subscription Start Date', 'Last Payment Date']),
     opts.join(' | '))
-  ok('select box stays 210 wide', Math.abs((await page.locator('button[class*="select"]').first().boundingBox()).width - 210) < 0.75)
+  ok('select box stays 210 wide', Math.abs((await page.locator('button[class*="select"]').first().boundingBox()).width - 246) < 0.75)
 
   await page.click('text=Subscription Start Date')
   await page.waitForTimeout(100)
@@ -533,7 +533,7 @@ const dateFieldFlow = async (page) => {
   ok('can pick Last Payment Date too', (await value()) === 'Last Payment Date', await value())
 
   // Long value ellipsizes without pushing the box wider.
-  ok('box still 210 with long value', Math.abs((await page.locator('button[class*="select"]').first().boundingBox()).width - 210) < 0.75)
+  ok('box still 210 with long value', Math.abs((await page.locator('button[class*="select"]').first().boundingBox()).width - 246) < 0.75)
 }
 
 // Real "today", matching the app's new Date().

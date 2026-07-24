@@ -200,6 +200,11 @@ export const filterByRange = (creators: Creator[], start: string, end: string): 
 
 /* --------------------------------------------------------------- presets -- */
 
+/** Earliest date the pool holds data for (first of last month) — the lower
+    bound for the date pickers, so ranges before the data can't be selected. */
+export const dataStart = (base: Date = today()): string =>
+  dash(new Date(base.getFullYear(), base.getMonth() - 1, 1))
+
 export const presetRange = (range: Range, base: Date = today()): { start: string; end: string } => {
   if (range === 'Today') return { start: dash(base), end: dash(base) }
   if (range === 'Last 7 days') {

@@ -6,6 +6,7 @@ import {
   GRAPH_TABS,
   DATE_TABS,
   cardsFor,
+  dataStart,
   deriveChart,
   filterByRange,
   generatePool,
@@ -39,6 +40,8 @@ export default function ReportPage() {
     const t = today()
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
   }, [])
+  // Data only exists from the first of last month; block earlier dates.
+  const minStr = useMemo(() => dataStart(), [])
 
   const [graphTab, setGraphTab] = useState<GraphTab>('Daily')
   // The pool of all creators; filtered by [startDate, endDate] for the view.
@@ -176,7 +179,7 @@ export default function ReportPage() {
             </div>
 
             <div className={styles.datepicker}>
-              <DatePicker value={startDate} onChange={changeStart} max={endDate} ariaLabel="Start date" />
+              <DatePicker value={startDate} onChange={changeStart} min={minStr} max={endDate} ariaLabel="Start date" />
               <span className={styles.dateSeparator}>~</span>
               <DatePicker value={endDate} onChange={changeEnd} min={startDate} max={todayStr} ariaLabel="End date" />
             </div>
