@@ -49,8 +49,15 @@ const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - 
 const round2 = (n: number) => Math.round(n * 100) / 100
 const pad = (n: number) => String(n).padStart(2, '0')
 
-const money = (n: number) => `$${n.toFixed(2)}`
-const moneySum = (n: number) => `$${n.toFixed(2).replace(/\.?0+$/, '') || '0'}`
+/** Group the integer part with thousands separators, leaving any decimals. */
+const withCommas = (s: string) => {
+  const [int, dec] = s.split('.')
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (dec !== undefined ? `.${dec}` : '')
+}
+const commaNum = (n: number) => withCommas(`${n}`)
+
+const money = (n: number) => `$${withCommas(n.toFixed(2))}`
+const moneySum = (n: number) => `$${withCommas(n.toFixed(2).replace(/\.?0+$/, '') || '0')}`
 
 const dot = (d: Date) => `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`
 const dash = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
@@ -106,11 +113,11 @@ const surplusFor = (subscribers: number) => (subscribers > 0 ? randInt(1, subscr
 
 /** The subscription catalogue — only Studio and Studio+ are offered, so every
     creator (pool + Add Creator) is on one of these two. `base` is the supply
-    price (공급가, not shown); `payment` is the VAT-inclusive amount billed and
-    shown as Total Payment. Commission is 20% of the payment. */
+    price (공급가, not shown); `payment` is the plan price. Total Payment adds
+    10% on top (payment x 1.1) and Commission is 20% of that Total Payment. */
 const PLANS = [
-  { name: 'Studio', promoCredit: '6:20:00', base: 90, payment: 97 },
-  { name: 'Studio+', promoCredit: '16:40:00', base: 220, payment: 244 },
+  { name: 'Studio', promoCredit: '1:00:00', base: 90, payment: 97 },
+  { name: 'Studio+', promoCredit: '1:00:00', base: 220, payment: 244 },
 ] as const
 
 type Plan = (typeof PLANS)[number]
@@ -121,7 +128,7 @@ const randomPlan = (): Plan => PLANS[randInt(0, PLANS.length - 1)]
 /* -------------------------------------------------------------- creators -- */
 
 const makeCreatorRow = (id: number, name: string, dateStr: string, plan: Plan): Creator => {
-  const amountNum = plan.payment
+  const amountNum = round2(plan.payment * 1.1)
   const markupNum = round2(amountNum * 0.2)
   return {
     id,
@@ -184,8 +191,8 @@ export const deriveValues = (creators: Creator[], extras: Extras): Values => {
 }
 
 const buildCards = (v: Values, prev: Values): Card[] => [
-  { label: 'Sign-ups', value: `${v.signUps}`, delta: `${prev.signUps}`, accent: ACCENTS[0] },
-  { label: 'Subscription Rate', value: `${v.subs}`, delta: `${prev.subs}`, accent: ACCENTS[1] },
+  { label: 'Sign-ups', value: commaNum(v.signUps), delta: commaNum(prev.signUps), accent: ACCENTS[0] },
+  { label: 'Subscription Rate', value: commaNum(v.subs), delta: commaNum(prev.subs), accent: ACCENTS[1] },
   { label: 'Conversion Rate', value: `${v.conv}%`, delta: `${prev.conv}%`, accent: ACCENTS[2] },
   { label: 'Total Payment', value: moneySum(v.payment), delta: moneySum(prev.payment), accent: ACCENTS[3] },
   { label: 'Commission', value: moneySum(v.markup), delta: moneySum(prev.markup), accent: ACCENTS[4] },
@@ -275,7 +282,7 @@ export const generatePool = (): Pool => {
   while (lmCommission < MIN_LAST_MONTH_COMMISSION) {
     const day = dot(new Date(end.getFullYear(), end.getMonth() - 1, randInt(1, lmDays)))
     creators.push(makeCreatorRow(id++, randomName(), day, topUp))
-    lmCommission = round2(lmCommission + round2(topUp.payment * 0.2))
+    lmCommission = round2(lmCommission + round2(round2(topUp.payment * 1.1) * 0.2))
   }
 
   creators.sort((a, b) => (a.signUpDate < b.signUpDate ? 1 : -1))

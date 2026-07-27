@@ -527,9 +527,9 @@
   padding: 0 3.667px;
 }
 
-/* "Markup" is the one header the design sets a step larger. */
+/* "Commission" header sits at the standard 16px body size. */
 .table th.headMarkup {
-  font-size: var(--font-size-body-xlarge);
+  font-size: var(--font-size-body-large);
 }
 
 /* A newly added row flashes, then settles back to the resting row colour. */

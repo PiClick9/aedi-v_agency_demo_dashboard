@@ -327,7 +327,7 @@ const reportSpec = (m) => {
   eq('head bg', m.headBg, 'rgb(247, 248, 250)')
   near('head font-size', m.headType.size, 16)
   eq('head weight', m.headType.weight, '700')
-  near('markup head font-size', m.markupHeadSize, 18)
+  near('markup head font-size', m.markupHeadSize, 16)
   ok('9 head cells', m.headCells.length === 9, `${m.headCells.length}`)
   m.headCells.forEach((c, i) => eq(`head ${i}`, c.text, HEAD_LABELS[i]))
   // Column widths: six flex columns at 130.333, plus 174, 146 and 98.
