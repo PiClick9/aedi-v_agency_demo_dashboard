@@ -200,8 +200,8 @@ const HEAD_LABELS = [
   'Subscription Start Date',
   'Subscription Plan',
   'Last Payment Date',
-  'Payment Amount',
-  'Markup',
+  'Total Payment',
+  'Commission',
   '',
 ]
 
@@ -404,10 +404,10 @@ const readState = (page) =>
     const bodyTexts = [...document.querySelectorAll('tbody td')].map((el) => el.textContent)
     return {
       signUps: cardValue('Sign-ups'),
-      subscribers: cardValue('Subscribers'),
+      subscribers: cardValue('Subscription Rate'),
       activeTab: document.querySelector('[class*="dateTabActive"]')?.textContent ?? 'none',
       dateValues: [...document.querySelectorAll('[class*="dateValue"]')].map((e) => e.textContent),
-      payment: cardValue('Payment Amount'),
+      payment: cardValue('Total Payment'),
       firstCreator: document.querySelector('tbody tr td:nth-child(2)')?.textContent ?? null,
       rowCount: document.querySelectorAll('tbody tr').length,
       dots: document.querySelectorAll('svg circle').length,

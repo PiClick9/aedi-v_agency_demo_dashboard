@@ -76,28 +76,41 @@ const weekStart = (s: string) => {
   return dot(d)
 }
 
-const nextCreatorName = (creators: Creator[]) => {
-  const max = creators.reduce((m, c) => {
-    const n = Number(c.creator.replace(/\D/g, ''))
-    return Number.isFinite(n) && n > m ? n : m
-  }, 0)
-  return `Creator${max + 1}`
-}
+/* Real-name pool for creators — a first + last name picked at random, so the
+   table reads like people rather than "Creator101". */
+const FIRST_NAMES = [
+  'James', 'Olivia', 'Liam', 'Emma', 'Noah', 'Ava', 'William', 'Sophia',
+  'Benjamin', 'Isabella', 'Lucas', 'Mia', 'Henry', 'Charlotte', 'Alexander',
+  'Amelia', 'Michael', 'Harper', 'Daniel', 'Evelyn', 'Matthew', 'Abigail',
+  'Jackson', 'Emily', 'Sebastian', 'Elizabeth', 'David', 'Sofia', 'Joseph',
+  'Ella', 'Samuel', 'Grace', 'Owen', 'Chloe', 'Gabriel', 'Victoria', 'Carter',
+  'Riley', 'Jayden', 'Aria', 'John', 'Lily', 'Luke', 'Zoey', 'Anthony', 'Nora',
+  'Isaac', 'Hannah', 'Dylan', 'Layla',
+]
+const LAST_NAMES = [
+  'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
+  'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson',
+  'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez',
+  'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis',
+  'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres',
+  'Nguyen', 'Hill', 'Flores', 'Green', 'Adams', 'Nelson', 'Baker', 'Hall',
+  'Rivera', 'Campbell', 'Mitchell', 'Roberts', 'Bennett',
+]
+
+const randomName = () =>
+  `${FIRST_NAMES[randInt(0, FIRST_NAMES.length - 1)]} ${LAST_NAMES[randInt(0, LAST_NAMES.length - 1)]}`
 
 const surplusFor = (subscribers: number) => (subscribers > 0 ? randInt(1, subscribers + 1) : 1)
 
 /* ----------------------------------------------------------------- plans -- */
 
-const VAT_RATE = 0.1
-
-/** The subscription catalogue. `base` is the list price; Payment Amount shows
-    it VAT-inclusive, so Standard bills at 15.5 x 1.1 = $17.05. Promo credit is
-    fixed per plan, so a row's plan decides its credit and its amount together —
-    there are only three shapes a creator row can take. */
+/** The subscription catalogue — only Studio and Studio+ are offered, so every
+    creator (pool + Add Creator) is on one of these two. `base` is the supply
+    price (공급가, not shown); `payment` is the VAT-inclusive amount billed and
+    shown as Total Payment. Commission is 20% of the payment. */
 const PLANS = [
-  { name: 'Starter', promoCredit: '30:00', base: 9 },
-  { name: 'Standard', promoCredit: '1:00:00', base: 15.5 },
-  { name: 'Pro', promoCredit: '2:00:00', base: 28 },
+  { name: 'Studio', promoCredit: '6:20:00', base: 90, payment: 97 },
+  { name: 'Studio+', promoCredit: '16:40:00', base: 220, payment: 244 },
 ] as const
 
 type Plan = (typeof PLANS)[number]
@@ -108,7 +121,7 @@ const randomPlan = (): Plan => PLANS[randInt(0, PLANS.length - 1)]
 /* -------------------------------------------------------------- creators -- */
 
 const makeCreatorRow = (id: number, name: string, dateStr: string, plan: Plan): Creator => {
-  const amountNum = round2(plan.base * (1 + VAT_RATE))
+  const amountNum = plan.payment
   const markupNum = round2(amountNum * 0.2)
   return {
     id,
@@ -172,10 +185,10 @@ export const deriveValues = (creators: Creator[], extras: Extras): Values => {
 
 const buildCards = (v: Values, prev: Values): Card[] => [
   { label: 'Sign-ups', value: `${v.signUps}`, delta: `${prev.signUps}`, accent: ACCENTS[0] },
-  { label: 'Subscribers', value: `${v.subs}`, delta: `${prev.subs}`, accent: ACCENTS[1] },
+  { label: 'Subscription Rate', value: `${v.subs}`, delta: `${prev.subs}`, accent: ACCENTS[1] },
   { label: 'Conversion Rate', value: `${v.conv}%`, delta: `${prev.conv}%`, accent: ACCENTS[2] },
-  { label: 'Payment Amount', value: moneySum(v.payment), delta: moneySum(prev.payment), accent: ACCENTS[3] },
-  { label: 'Markup', value: moneySum(v.markup), delta: moneySum(prev.markup), accent: ACCENTS[4] },
+  { label: 'Total Payment', value: moneySum(v.payment), delta: moneySum(prev.payment), accent: ACCENTS[3] },
+  { label: 'Commission', value: moneySum(v.markup), delta: moneySum(prev.markup), accent: ACCENTS[4] },
 ]
 
 const priorOf = (v: Values): Values => ({
@@ -229,6 +242,10 @@ export const matchPreset = (start: string, end: string, base: Date = today()): R
 
 /* ------------------------------------------------------------------ pool -- */
 
+/** Last Month must always show a healthy commission — the demo guarantees the
+    Commission card is at least this when the Last Month preset is selected. */
+const MIN_LAST_MONTH_COMMISSION = 1705
+
 /** One pool of paying creators for every day from the first of last month to
     today, with a per-day lead surplus. The report filters this by range. */
 export const generatePool = (): Pool => {
@@ -240,9 +257,27 @@ export const generatePool = (): Pool => {
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const day = dot(d)
     const n = randInt(1, 3)
-    for (let k = 0; k < n; k++) creators.push(makeCreatorRow(id++, `Creator${id - 1}`, day, randomPlan()))
+    for (let k = 0; k < n; k++) creators.push(makeCreatorRow(id++, randomName(), day, randomPlan()))
     extras[day] = surplusFor(n)
   }
+
+  // Top up last month until its commission clears the floor. Studio+ ($244 →
+  // $48.80 commission) lands on random last-month days; those days already
+  // carry a surplus, so the sign-up bar stays taller than subscribers.
+  const lm = presetRange('Last Month', end)
+  const inLastMonth = (c: Creator) => {
+    const v = dotToDash(c.signUpDate)
+    return v >= lm.start && v <= lm.end
+  }
+  const lmDays = new Date(end.getFullYear(), end.getMonth(), 0).getDate()
+  const topUp = PLANS.find((p) => p.name === 'Studio+') as Plan
+  let lmCommission = round2(creators.filter(inLastMonth).reduce((s, c) => s + c.markupNum, 0))
+  while (lmCommission < MIN_LAST_MONTH_COMMISSION) {
+    const day = dot(new Date(end.getFullYear(), end.getMonth() - 1, randInt(1, lmDays)))
+    creators.push(makeCreatorRow(id++, randomName(), day, topUp))
+    lmCommission = round2(lmCommission + round2(topUp.payment * 0.2))
+  }
+
   creators.sort((a, b) => (a.signUpDate < b.signUpDate ? 1 : -1))
   return { creators, extras }
 }
@@ -252,7 +287,7 @@ export const generatePool = (): Pool => {
 export const makeCreatorAt = (pool: Pool, dayDash: string): { creator: Creator; extras: Extras } => {
   const day = dashToDot(dayDash)
   const id = pool.creators.reduce((m, c) => Math.max(m, c.id), 0) + 1
-  const creator = makeCreatorRow(id, nextCreatorName(pool.creators), day, randomPlan())
+  const creator = makeCreatorRow(id, randomName(), day, randomPlan())
   const extras = day in pool.extras ? pool.extras : { ...pool.extras, [day]: 1 }
   return { creator, extras }
 }

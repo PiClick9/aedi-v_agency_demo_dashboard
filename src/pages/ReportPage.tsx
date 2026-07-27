@@ -140,7 +140,7 @@ export default function ReportPage() {
 
         <section className={styles.viz}>
           <div className={styles.dateRow}>
-            <span className={styles.dateLabel}>Date Range</span>
+            <span className={styles.dateLabel}>Duration</span>
 
             <div className={styles.fieldPicker} ref={pickerRef}>
               <button
@@ -237,11 +237,11 @@ export default function ReportPage() {
               </span>
               <span className={styles.legendItem}>
                 <span className={styles.legendDot} style={{ background: 'var(--color-border-pd02)' }} />
-                Subscribers
+                Subscription Rate
               </span>
               <span className={styles.legendItem}>
                 <span className={styles.legendLine} />
-                Markup
+                Commission
               </span>
             </div>
           </div>
@@ -267,8 +267,8 @@ export default function ReportPage() {
                   <th className={styles.colStart}>Subscription Start Date</th>
                   <th className={`${styles.colFlex} ${styles.colPlan}`}>Subscription Plan</th>
                   <th className={`${styles.colFlex} ${styles.headLastPayment}`}>Last Payment Date</th>
-                  <th className={`${styles.colFlex} ${styles.alignRight}`}>Payment Amount</th>
-                  <th className={`${styles.colFlex} ${styles.headMarkup} ${styles.headNowrap} ${styles.alignRight} ${styles.paddingRight}`}>Markup</th>
+                  <th className={`${styles.colFlex} ${styles.headNowrap}`}>Total Payment</th>
+                  <th className={`${styles.colFlex} ${styles.headMarkup} ${styles.headNowrap} ${styles.alignRight} ${styles.paddingRight}`}>Commission</th>
                   <th className={styles.colAction} aria-label="Actions" />
                 </tr>
               </thead>
