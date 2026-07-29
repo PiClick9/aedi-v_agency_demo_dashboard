@@ -192,7 +192,7 @@ export const deriveValues = (creators: Creator[], extras: Extras): Values => {
 
 const buildCards = (v: Values, prev: Values): Card[] => [
   { label: 'Sign-ups', value: commaNum(v.signUps), delta: commaNum(prev.signUps), accent: ACCENTS[0] },
-  { label: 'Subscription Rate', value: commaNum(v.subs), delta: commaNum(prev.subs), accent: ACCENTS[1] },
+  { label: 'Subscribers', value: commaNum(v.subs), delta: commaNum(prev.subs), accent: ACCENTS[1] },
   { label: 'Conversion Rate', value: `${v.conv}%`, delta: `${prev.conv}%`, accent: ACCENTS[2] },
   { label: 'Total Payment', value: moneySum(v.payment), delta: moneySum(prev.payment), accent: ACCENTS[3] },
   { label: 'Commission', value: moneySum(v.markup), delta: moneySum(prev.markup), accent: ACCENTS[4] },

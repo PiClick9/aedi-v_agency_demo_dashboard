@@ -404,7 +404,7 @@ const readState = (page) =>
     const bodyTexts = [...document.querySelectorAll('tbody td')].map((el) => el.textContent)
     return {
       signUps: cardValue('Sign-ups'),
-      subscribers: cardValue('Subscription Rate'),
+      subscribers: cardValue('Subscribers'),
       activeTab: document.querySelector('[class*="dateTabActive"]')?.textContent ?? 'none',
       dateValues: [...document.querySelectorAll('[class*="dateValue"]')].map((e) => e.textContent),
       payment: cardValue('Total Payment'),

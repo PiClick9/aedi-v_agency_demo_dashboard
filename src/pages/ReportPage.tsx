@@ -237,7 +237,7 @@ export default function ReportPage() {
               </span>
               <span className={styles.legendItem}>
                 <span className={styles.legendDot} style={{ background: 'var(--color-border-pd02)' }} />
-                Subscription Rate
+                Subscribers
               </span>
               <span className={styles.legendItem}>
                 <span className={styles.legendLine} />
