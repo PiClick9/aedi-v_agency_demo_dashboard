@@ -253,6 +253,9 @@ export const matchPreset = (start: string, end: string, base: Date = today()): R
     Commission card is at least this when the Last Month preset is selected. */
 const MIN_LAST_MONTH_COMMISSION = 1705
 
+/** The default "Last 7 days" demo view should clear this commission floor. */
+const LAST_7_DAYS_COMMISSION_FLOOR = 3000
+
 /** One pool of paying creators for every day from the first of last month to
     today, with a per-day lead surplus. The report filters this by range. */
 export const generatePool = (): Pool => {
@@ -283,6 +286,25 @@ export const generatePool = (): Pool => {
     const day = dot(new Date(end.getFullYear(), end.getMonth() - 1, randInt(1, lmDays)))
     creators.push(makeCreatorRow(id++, randomName(), day, topUp))
     lmCommission = round2(lmCommission + round2(round2(topUp.payment * 1.1) * 0.2))
+  }
+
+  // Raise subscriptions across the default seven-day range with regular
+  // Studio+ payments until Commission naturally clears $3,000.
+  const last7 = presetRange('Last 7 days', end)
+  const inLast7 = (c: Creator) => {
+    const v = dotToDash(c.signUpDate)
+    return v >= last7.start && v <= last7.end
+  }
+  let last7Commission = round2(creators.filter(inLast7).reduce((s, c) => s + c.markupNum, 0))
+  let topUpIndex = 0
+
+  while (last7Commission <= LAST_7_DAYS_COMMISSION_FLOOR) {
+    const d = new Date(end)
+    d.setDate(d.getDate() - (topUpIndex % 7))
+    const creator = makeCreatorRow(id++, randomName(), dot(d), topUp)
+    creators.push(creator)
+    last7Commission = round2(last7Commission + creator.markupNum)
+    topUpIndex += 1
   }
 
   creators.sort((a, b) => (a.signUpDate < b.signUpDate ? 1 : -1))
